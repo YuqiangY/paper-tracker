@@ -121,6 +121,16 @@ def _build_markdown(papers: list[dict], date: str) -> str:
         if max_h:
             lines[-1] += f"  |  max h-index: **{max_h}**"
         lines.append("")
+        venue = (p.get("venue") or "").strip()
+        citations = p.get("citation_count")
+        if venue or (citations and citations > 0):
+            meta_parts = []
+            if venue:
+                meta_parts.append(f"**会议/期刊**: {venue}")
+            if citations and citations > 0:
+                meta_parts.append(f"**引用**: {citations}")
+            lines.append("  |  ".join(meta_parts))
+            lines.append("")
         lines.append(f"> {summary}")
         lines.append("")
         if why:
@@ -171,6 +181,16 @@ def _build_markdown(papers: list[dict], date: str) -> str:
             if max_h:
                 lines[-1] += f"  |  max h-index: **{max_h}**"
             lines.append("")
+            venue = (p.get("venue") or "").strip()
+            citations = p.get("citation_count")
+            if venue or (citations and citations > 0):
+                meta_parts = []
+                if venue:
+                    meta_parts.append(f"**会议/期刊**: {venue}")
+                if citations and citations > 0:
+                    meta_parts.append(f"**引用**: {citations}")
+                lines.append("  |  ".join(meta_parts))
+                lines.append("")
             lines.append(f"> {summary}")
             lines.append("")
             if why:

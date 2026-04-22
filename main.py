@@ -1,14 +1,17 @@
 from __future__ import annotations
+import argparse
 import json
 import logging
 import os
+import shlex
+import subprocess
 import sys
 from datetime import date
 
 import yaml
 from dotenv import load_dotenv
 
-from models import Paper, papers_to_json
+from models import Paper, papers_to_json, papers_from_json
 from fetcher import fetch_arxiv, fetch_hf_daily, fetch_s2_search, fetch_rss, enrich_authors
 from filter.keyword_filter import keyword_filter
 from filter.llm_filter import llm_filter
@@ -30,93 +33,92 @@ def load_config(path: str) -> dict:
         return yaml.safe_load(f)
 
 
-def run_pipeline(
-    config: dict,
-    data_dir: str | None = None,
-    db_path: str | None = None,
-    site_dir: str | None = None,
-):
-    base_dir = os.path.dirname(os.path.abspath(__file__))
-    data_dir = data_dir or os.path.join(base_dir, "data", "daily")
-    db_path = db_path or os.path.join(base_dir, "data", "papers.db")
-    site_dir = site_dir or os.path.join(base_dir, config["output"]["html"]["output_dir"])
+# ---------------------------------------------------------------------------
+# Stage functions
+# ---------------------------------------------------------------------------
 
-    os.makedirs(data_dir, exist_ok=True)
-    os.makedirs(os.path.dirname(db_path), exist_ok=True)
-
-    db = PaperDB(db_path)
-    today = date.today().isoformat()
-
-    # --- Stage 1: Fetch ---
+def stage_fetch(config: dict) -> list[Paper]:
     all_papers: list[Paper] = []
 
     if config["sources"]["arxiv"]["enabled"]:
-        all_categories = []
-        for interest in config["interests"]:
-            all_categories.extend(interest.get("arxiv_categories", []))
-        unique_categories = list(dict.fromkeys(all_categories))
+        try:
+            all_categories = []
+            for interest in config["interests"]:
+                all_categories.extend(interest.get("arxiv_categories", []))
+            unique_categories = list(dict.fromkeys(all_categories))
 
-        log.info("Fetching from arXiv: categories=%s", unique_categories)
-        arxiv_papers = fetch_arxiv(
-            categories=unique_categories,
-            max_results=config["sources"]["arxiv"]["max_results_per_category"],
-            lookback_days=config["sources"]["arxiv"]["lookback_days"],
-        )
-        log.info("arXiv returned %d papers", len(arxiv_papers))
-        all_papers.extend(arxiv_papers)
+            log.info("Fetching from arXiv: categories=%s", unique_categories)
+            arxiv_papers = fetch_arxiv(
+                categories=unique_categories,
+                max_results=config["sources"]["arxiv"]["max_results_per_category"],
+                lookback_days=config["sources"]["arxiv"]["lookback_days"],
+            )
+            log.info("arXiv returned %d papers", len(arxiv_papers))
+            all_papers.extend(arxiv_papers)
+        except Exception as e:
+            log.warning("arXiv fetch failed: %s. Continuing with other sources.", e)
 
     if config["sources"].get("hf_daily", {}).get("enabled", False):
-        log.info("Fetching from HuggingFace Daily Papers")
-        hf_papers = fetch_hf_daily(
-            lookback_days=config["sources"]["hf_daily"].get("lookback_days", 3),
-        )
-        log.info("HF Daily returned %d papers", len(hf_papers))
-        all_papers.extend(hf_papers)
+        try:
+            log.info("Fetching from HuggingFace Daily Papers")
+            hf_papers = fetch_hf_daily(
+                lookback_days=config["sources"]["hf_daily"].get("lookback_days", 3),
+            )
+            log.info("HF Daily returned %d papers", len(hf_papers))
+            all_papers.extend(hf_papers)
+        except Exception as e:
+            log.warning("HF Daily fetch failed: %s. Continuing with other sources.", e)
 
     if config["sources"].get("s2_search", {}).get("enabled", False):
-        search_queries = []
-        for interest in config["interests"]:
-            search_queries.extend(interest.get("search_queries", []))
-        if search_queries:
-            from datetime import date as _date
-            current_year = str(_date.today().year)
-            log.info("Fetching from Semantic Scholar search: %d queries", len(search_queries))
-            s2_papers = fetch_s2_search(
-                queries=search_queries,
-                year=current_year,
-                limit_per_query=config["sources"]["s2_search"].get("limit_per_query", 20),
-                api_key=os.environ.get("SEMANTIC_SCHOLAR_API_KEY"),
-                timeout=config.get("enrichment", {}).get("timeout", 10),
-            )
-            log.info("S2 search returned %d papers", len(s2_papers))
-            all_papers.extend(s2_papers)
+        try:
+            search_queries = []
+            for interest in config["interests"]:
+                search_queries.extend(interest.get("search_queries", []))
+            if search_queries:
+                from datetime import date as _date
+                current_year = str(_date.today().year)
+                log.info("Fetching from Semantic Scholar search: %d queries", len(search_queries))
+                s2_papers = fetch_s2_search(
+                    queries=search_queries,
+                    year=current_year,
+                    limit_per_query=config["sources"]["s2_search"].get("limit_per_query", 20),
+                    api_key=os.environ.get("SEMANTIC_SCHOLAR_API_KEY"),
+                    timeout=config.get("enrichment", {}).get("timeout", 10),
+                )
+                log.info("S2 search returned %d papers", len(s2_papers))
+                all_papers.extend(s2_papers)
+        except Exception as e:
+            log.warning("S2 search fetch failed: %s. Continuing with other sources.", e)
 
     if config["sources"]["rss"]["enabled"]:
-        feeds = config["sources"]["rss"]["feeds"]
-        log.info("Fetching from %d RSS feeds", len(feeds))
-        rss_papers = fetch_rss(feeds)
-        log.info("RSS returned %d papers", len(rss_papers))
-        all_papers.extend(rss_papers)
+        try:
+            feeds = config["sources"]["rss"]["feeds"]
+            log.info("Fetching from %d RSS feeds", len(feeds))
+            rss_papers = fetch_rss(feeds)
+            log.info("RSS returned %d papers", len(rss_papers))
+            all_papers.extend(rss_papers)
+        except Exception as e:
+            log.warning("RSS fetch failed: %s. Continuing with other sources.", e)
 
-    # --- Stage 2: Dedup via DB ---
+    log.info("Total fetched: %d papers", len(all_papers))
+    return all_papers
+
+
+def stage_dedup(papers: list[Paper], db: PaperDB) -> list[Paper]:
     new_papers = []
-    for p in all_papers:
+    for p in papers:
         if not db.exists(p.id):
             db.insert(p)
             new_papers.append(p)
-    log.info("After dedup: %d new papers (of %d total)", len(new_papers), len(all_papers))
+    log.info("After dedup: %d new papers (of %d total)", len(new_papers), len(papers))
+    return new_papers
 
-    if not new_papers:
-        log.info("No new papers today. Exiting.")
-        # Still save empty JSON
-        json_path = os.path.join(data_dir, f"{today}.json")
-        with open(json_path, "w") as f:
-            f.write("[]")
-        return
 
-    # --- Stage 3: Keyword filter ---
+def stage_filter(
+    papers: list[Paper], config: dict,
+) -> list[Paper]:
     kw_results = keyword_filter(
-        new_papers,
+        papers,
         config["interests"],
         threshold=config["filter"]["keyword_threshold"],
     )
@@ -124,13 +126,8 @@ def run_pipeline(
     log.info("After keyword filter: %d papers", len(kw_papers))
 
     if not kw_papers:
-        log.info("No papers passed keyword filter. Exiting.")
-        json_path = os.path.join(data_dir, f"{today}.json")
-        with open(json_path, "w") as f:
-            f.write("[]")
-        return
+        return []
 
-    # --- Stage 4: LLM filter ---
     api_key = os.environ.get("ANTHROPIC_API_KEY", "")
     base_url = os.environ.get("ANTHROPIC_BASE_URL") or None
 
@@ -150,45 +147,57 @@ def run_pipeline(
         log.warning("LLM filter failed: %s. Falling back to keyword-only results.", e)
         scored_papers = kw_papers
 
-    # --- Stage 5: Update DB with scores ---
-    for p in scored_papers:
+    return scored_papers
+
+
+def stage_enrich(papers: list[Paper], config: dict, db: PaperDB) -> list[Paper]:
+    for p in papers:
         if p.relevance_score is not None:
             db.update_filter_result(
                 p.id, p.relevance_score, p.primary_category or "",
                 p.summary_zh or "", p.why_relevant or "", p.tags or [],
             )
 
-    # --- Stage 5.5: Author enrichment (optional, on filtered papers only) ---
     enrichment_cfg = config.get("enrichment", {})
-    if enrichment_cfg.get("enabled", False) and scored_papers:
+    if enrichment_cfg.get("enabled", False) and papers:
         s2_api_key = os.environ.get("SEMANTIC_SCHOLAR_API_KEY")
-        log.info("Enriching %d filtered papers with author data", len(scored_papers))
+        log.info("Enriching %d filtered papers with author data", len(papers))
         try:
             enrich_authors(
-                scored_papers,
+                papers,
                 api_key=s2_api_key,
                 timeout=enrichment_cfg.get("timeout", 10),
                 max_authors_per_paper=enrichment_cfg.get("max_authors_per_paper", 5),
             )
-            for p in scored_papers:
+            for p in papers:
                 if p.authors_enriched:
                     db.update_authors_enriched(p.id, p.authors_enriched)
+                if any([p.venue, p.citation_count, p.tldr, p.doi]):
+                    db.update_metadata(p.id, p.venue, p.citation_count, p.tldr, p.doi)
             log.info("Author enrichment complete")
         except Exception as e:
             log.warning("Author enrichment failed: %s. Continuing without.", e)
 
-    # --- Stage 6: Save daily JSON ---
+    return papers
+
+
+def stage_output(
+    config: dict, db: PaperDB,
+    scored_papers: list[Paper],
+    data_dir: str, site_dir: str, today: str,
+):
     json_path = os.path.join(data_dir, f"{today}.json")
     with open(json_path, "w") as f:
         f.write(papers_to_json(scored_papers))
     log.info("Saved %d papers to %s", len(scored_papers), json_path)
 
-    # --- Stage 7: Prepare paper dicts for output ---
     paper_dicts = db.get_papers_by_date(today, min_score=config["filter"]["llm_relevance_threshold"])
     if not paper_dicts:
         paper_dicts = [json.loads(papers_to_json([p]))[0] for p in scored_papers]
 
-    # --- Stage 7c: Generate domain hotspot summary ---
+    api_key = os.environ.get("ANTHROPIC_API_KEY", "")
+    base_url = os.environ.get("ANTHROPIC_BASE_URL") or None
+
     summary_html = ""
     summary_text = ""
     if config.get("summary", {}).get("enabled", False) and paper_dicts:
@@ -208,7 +217,6 @@ def run_pipeline(
         except Exception as e:
             log.warning("Summary generation failed: %s", e)
 
-    # --- Stage 7a: Generate HTML ---
     if config["output"]["html"]["enabled"]:
         generate_daily_page(paper_dicts, today, site_dir, config["output"]["html"]["title"], summary=summary_html)
 
@@ -222,9 +230,13 @@ def run_pipeline(
 
         deploy_cmd = config["output"]["html"].get("deploy_cmd")
         if deploy_cmd:
-            os.system(deploy_cmd)
+            try:
+                result = subprocess.run(shlex.split(deploy_cmd), capture_output=True, text=True, timeout=120)
+                if result.returncode != 0:
+                    log.warning("Deploy failed (rc=%d): %s", result.returncode, result.stderr[:500])
+            except Exception as e:
+                log.warning("Deploy command failed: %s", e)
 
-    # --- Stage 7b: Generate Feishu doc ---
     feishu_cfg = config.get("output", {}).get("feishu", {})
     if feishu_cfg.get("enabled", False):
         generate_feishu_doc(
@@ -233,7 +245,6 @@ def run_pipeline(
             wiki_space=feishu_cfg.get("wiki_space", ""),
         )
 
-    # --- Stage 7d: Feishu bot notification ---
     bot_cfg = config.get("output", {}).get("feishu_bot", {})
     if bot_cfg.get("enabled", False) and summary_text:
         webhook_url = os.environ.get(bot_cfg.get("webhook_url_env", ""), "")
@@ -250,15 +261,152 @@ def run_pipeline(
         else:
             log.warning("FEISHU_BOT_WEBHOOK_URL not set, skipping bot notification")
 
-    db.close()
-    log.info("Pipeline complete.")
+
+# ---------------------------------------------------------------------------
+# Pipeline orchestration
+# ---------------------------------------------------------------------------
+
+def _resolve_paths(config: dict):
+    base_dir = os.path.dirname(os.path.abspath(__file__))
+    data_dir = os.path.join(base_dir, "data", "daily")
+    db_path = os.path.join(base_dir, "data", "papers.db")
+    site_dir = os.path.join(base_dir, config["output"]["html"]["output_dir"])
+    os.makedirs(data_dir, exist_ok=True)
+    os.makedirs(os.path.dirname(db_path), exist_ok=True)
+    return data_dir, db_path, site_dir
+
+
+def run_pipeline(
+    config: dict,
+    data_dir: str | None = None,
+    db_path: str | None = None,
+    site_dir: str | None = None,
+):
+    resolved = _resolve_paths(config)
+    data_dir = data_dir or resolved[0]
+    db_path = db_path or resolved[1]
+    site_dir = site_dir or resolved[2]
+
+    db = PaperDB(db_path)
+    try:
+        today = date.today().isoformat()
+
+        all_papers = stage_fetch(config)
+        new_papers = stage_dedup(all_papers, db)
+
+        if not new_papers:
+            log.info("No new papers today. Exiting.")
+            with open(os.path.join(data_dir, f"{today}.json"), "w") as f:
+                f.write("[]")
+            return
+
+        scored_papers = stage_filter(new_papers, config)
+
+        if not scored_papers:
+            log.info("No papers passed filtering. Exiting.")
+            with open(os.path.join(data_dir, f"{today}.json"), "w") as f:
+                f.write("[]")
+            return
+
+        scored_papers = stage_enrich(scored_papers, config, db)
+        stage_output(config, db, scored_papers, data_dir, site_dir, today)
+    finally:
+        db.close()
+        log.info("Pipeline complete.")
+
+
+# ---------------------------------------------------------------------------
+# CLI subcommands
+# ---------------------------------------------------------------------------
+
+def cmd_fetch(config: dict):
+    data_dir, db_path, _ = _resolve_paths(config)
+    today = date.today().isoformat()
+    papers = stage_fetch(config)
+
+    db = PaperDB(db_path)
+    try:
+        new_papers = stage_dedup(papers, db)
+    finally:
+        db.close()
+
+    json_path = os.path.join(data_dir, f"{today}_raw.json")
+    with open(json_path, "w") as f:
+        f.write(papers_to_json(new_papers))
+    log.info("Fetch complete: %d new papers saved to %s", len(new_papers), json_path)
+
+
+def cmd_filter(config: dict):
+    data_dir, db_path, _ = _resolve_paths(config)
+    today = date.today().isoformat()
+
+    raw_path = os.path.join(data_dir, f"{today}_raw.json")
+    if not os.path.exists(raw_path):
+        log.error("No raw data found at %s. Run 'fetch' first.", raw_path)
+        return
+
+    with open(raw_path) as f:
+        papers = papers_from_json(f.read())
+
+    scored = stage_filter(papers, config)
+
+    db = PaperDB(db_path)
+    try:
+        scored = stage_enrich(scored, config, db)
+    finally:
+        db.close()
+
+    json_path = os.path.join(data_dir, f"{today}.json")
+    with open(json_path, "w") as f:
+        f.write(papers_to_json(scored))
+    log.info("Filter complete: %d papers saved to %s", len(scored), json_path)
+
+
+def cmd_output(config: dict):
+    data_dir, db_path, site_dir = _resolve_paths(config)
+    today = date.today().isoformat()
+
+    json_path = os.path.join(data_dir, f"{today}.json")
+    if not os.path.exists(json_path):
+        log.error("No data found at %s. Run the pipeline first.", json_path)
+        return
+
+    with open(json_path) as f:
+        papers = papers_from_json(f.read())
+
+    db = PaperDB(db_path)
+    try:
+        stage_output(config, db, papers, data_dir, site_dir, today)
+    finally:
+        db.close()
+    log.info("Output generation complete.")
 
 
 def main():
     load_dotenv(override=True)
-    config_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "config.yaml")
-    config = load_config(config_path)
-    run_pipeline(config)
+    base_dir = os.path.dirname(os.path.abspath(__file__))
+    config_path = os.path.join(base_dir, "config.yaml")
+
+    parser = argparse.ArgumentParser(description="Paper Tracker Pipeline")
+    parser.add_argument("--config", default=config_path, help="Path to config.yaml")
+    subparsers = parser.add_subparsers(dest="command")
+    subparsers.add_parser("fetch", help="Fetch papers and dedup into DB")
+    subparsers.add_parser("filter", help="Run keyword + LLM filtering on today's raw data")
+    subparsers.add_parser("output", help="Generate HTML and Feishu output from today's data")
+    subparsers.add_parser("run-all", help="Run full pipeline (default)")
+
+    args = parser.parse_args()
+    config = load_config(args.config)
+    command = args.command or "run-all"
+
+    if command == "fetch":
+        cmd_fetch(config)
+    elif command == "filter":
+        cmd_filter(config)
+    elif command == "output":
+        cmd_output(config)
+    else:
+        run_pipeline(config)
 
 
 if __name__ == "__main__":

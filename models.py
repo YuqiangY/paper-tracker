@@ -28,6 +28,10 @@ class Paper:
     why_relevant: str | None = None
     tags: list[str] | None = None
     authors_enriched: list[dict] | None = None
+    venue: str | None = None
+    citation_count: int | None = None
+    tldr: str | None = None
+    doi: str | None = None
 
     @property
     def max_h_index(self) -> int | None:

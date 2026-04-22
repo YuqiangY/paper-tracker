@@ -41,8 +41,19 @@ class PaperDB:
     def _migrate(self):
         cursor = self.conn.execute("PRAGMA table_info(papers)")
         existing = {row[1] for row in cursor.fetchall()}
-        if "authors_enriched" not in existing:
-            self.conn.execute("ALTER TABLE papers ADD COLUMN authors_enriched TEXT")
+        new_columns = {
+            "authors_enriched": "TEXT",
+            "venue": "TEXT",
+            "citation_count": "INTEGER",
+            "tldr": "TEXT",
+            "doi": "TEXT",
+        }
+        added = False
+        for col, col_type in new_columns.items():
+            if col not in existing:
+                self.conn.execute(f"ALTER TABLE papers ADD COLUMN {col} {col_type}")
+                added = True
+        if added:
             self.conn.commit()
 
     def exists(self, paper_id: str) -> bool:
@@ -58,8 +69,9 @@ class PaperDB:
         self.conn.execute(
             """INSERT INTO papers
                (id, title, authors, abstract, url, source, published,
-                categories, pdf_url, first_seen, authors_enriched)
-               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+                categories, pdf_url, first_seen, authors_enriched,
+                venue, citation_count, tldr, doi)
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
             (
                 paper.id,
                 paper.title,
@@ -72,6 +84,10 @@ class PaperDB:
                 paper.pdf_url,
                 now,
                 json.dumps(paper.authors_enriched, ensure_ascii=False) if paper.authors_enriched else None,
+                paper.venue,
+                paper.citation_count,
+                paper.tldr,
+                paper.doi,
             ),
         )
         self.conn.commit()
@@ -80,6 +96,16 @@ class PaperDB:
         self.conn.execute(
             "UPDATE papers SET authors_enriched = ? WHERE id = ?",
             (json.dumps(authors_enriched, ensure_ascii=False), paper_id),
+        )
+        self.conn.commit()
+
+    def update_metadata(self, paper_id: str, venue: str | None,
+                        citation_count: int | None, tldr: str | None,
+                        doi: str | None):
+        self.conn.execute(
+            """UPDATE papers SET venue = ?, citation_count = ?, tldr = ?, doi = ?
+               WHERE id = ?""",
+            (venue, citation_count, tldr, doi, paper_id),
         )
         self.conn.commit()
 

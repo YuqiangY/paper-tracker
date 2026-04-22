@@ -7,7 +7,7 @@ from .author_enrichment import _s2_get
 log = logging.getLogger(__name__)
 
 S2_SEARCH_URL = "https://api.semanticscholar.org/graph/v1/paper/search"
-S2_SEARCH_FIELDS = "title,authors,abstract,year,externalIds,publicationDate"
+S2_SEARCH_FIELDS = "title,authors,abstract,year,externalIds,publicationDate,venue,citationCount,tldr"
 
 
 def fetch_s2_search(
@@ -86,6 +86,12 @@ def _parse_s2_papers(items: list[dict]) -> list[Paper]:
         url = f"https://arxiv.org/abs/{arxiv_id}" if arxiv_id else f"https://www.semanticscholar.org/paper/{s2_paper_id}"
         pdf_url = f"https://arxiv.org/pdf/{arxiv_id}" if arxiv_id else None
 
+        venue = (item.get("venue") or "").strip() or None
+        citation_count = item.get("citationCount")
+        tldr_obj = item.get("tldr")
+        tldr = tldr_obj.get("text") if isinstance(tldr_obj, dict) else None
+        doi = external_ids.get("DOI")
+
         papers.append(Paper(
             id=paper_id,
             title=title,
@@ -96,6 +102,10 @@ def _parse_s2_papers(items: list[dict]) -> list[Paper]:
             published=published or (str(year_val) if year_val else ""),
             categories=[],
             pdf_url=pdf_url,
+            venue=venue,
+            citation_count=citation_count,
+            tldr=tldr,
+            doi=doi,
         ))
 
     return papers

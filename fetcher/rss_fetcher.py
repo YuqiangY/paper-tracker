@@ -1,16 +1,24 @@
 from __future__ import annotations
+import logging
 import re
 import time
 import feedparser
 from models import Paper
 
+log = logging.getLogger(__name__)
+
 
 def fetch_rss(feeds: list[dict]) -> list[Paper]:
     all_papers = []
     for feed_cfg in feeds:
-        feed_data = feedparser.parse(feed_cfg["url"])
-        papers = _parse_feed(feed_data, feed_cfg["name"])
-        all_papers.extend(papers)
+        try:
+            feed_data = feedparser.parse(feed_cfg["url"])
+            if feed_data.bozo:
+                log.warning("RSS feed '%s' had parse issues: %s", feed_cfg.get("name", ""), feed_data.bozo_exception)
+            papers = _parse_feed(feed_data, feed_cfg["name"])
+            all_papers.extend(papers)
+        except Exception as e:
+            log.warning("RSS fetch failed for '%s': %s", feed_cfg.get("name", ""), e)
     return all_papers
 
 

@@ -52,6 +52,23 @@ def enrich_authors(
     h_index_map = _batch_fetch_h_indices(author_ids_to_fetch, api_key, timeout)
 
     for paper in arxiv_papers:
+        s2_data = paper_s2_data.get(paper.id)
+
+        # Backfill paper-level metadata from S2
+        if s2_data:
+            if not paper.venue and s2_data.get("venue"):
+                paper.venue = s2_data["venue"].strip()
+            if paper.citation_count is None and s2_data.get("citationCount") is not None:
+                paper.citation_count = s2_data["citationCount"]
+            if not paper.tldr:
+                tldr_obj = s2_data.get("tldr")
+                if isinstance(tldr_obj, dict):
+                    paper.tldr = tldr_obj.get("text")
+            if not paper.doi:
+                ext_ids = s2_data.get("externalIds") or {}
+                paper.doi = ext_ids.get("DOI")
+
+        # Author enrichment
         s2_authors = paper_author_map.get(paper.id, [])
         if not s2_authors:
             continue
@@ -173,7 +190,7 @@ def _batch_fetch_papers(
         try:
             data = _s2_post(
                 S2_BATCH_URL,
-                params={"fields": "authors.authorId,authors.name,authors.affiliations"},
+                params={"fields": "authors.authorId,authors.name,authors.affiliations,venue,citationCount,tldr,externalIds"},
                 body={"ids": batch_ids},
                 api_key=api_key,
                 timeout=timeout,
