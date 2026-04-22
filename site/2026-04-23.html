@@ -1,0 +1,676 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Paper Tracker - 2026-04-23</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+         color: #333; background: #fafafa; }
+
+  .layout { display: flex; max-width: 1200px; margin: 0 auto; }
+
+  /* Sidebar */
+  .sidebar { width: 220px; position: sticky; top: 0; height: 100vh; overflow-y: auto;
+             padding: 20px 16px; border-right: 1px solid #e0e0e0; background: #fff; flex-shrink: 0; }
+  .sidebar h3 { font-size: 0.85em; color: #666; text-transform: uppercase; letter-spacing: 0.5px;
+                margin-bottom: 12px; }
+  .sidebar-nav { list-style: none; }
+  .sidebar-nav li { margin-bottom: 4px; }
+  .sidebar-nav a { display: block; padding: 6px 10px; border-radius: 6px; color: #333;
+                   text-decoration: none; font-size: 0.9em; transition: background 0.15s; }
+  .sidebar-nav a:hover { background: #e8f0fe; }
+  .sidebar-nav a.active { background: #4a90d9; color: #fff; }
+  .sidebar-nav .nav-count { float: right; color: #999; font-size: 0.8em; }
+  .sidebar-nav a.active .nav-count { color: rgba(255,255,255,0.8); }
+  .sidebar-back { display: block; margin-bottom: 20px; color: #4a90d9; text-decoration: none;
+                  font-size: 0.9em; }
+  .sidebar-meta { font-size: 0.8em; color: #999; margin-top: 16px; padding-top: 12px;
+                  border-top: 1px solid #eee; }
+
+  /* Main content */
+  .main { flex: 1; min-width: 0; padding: 24px 32px; }
+
+  h1 { margin-bottom: 8px; font-size: 1.6em; }
+  .meta { color: #666; margin-bottom: 24px; }
+
+  /* Summary section */
+  .summary-section { background: #fff; border: 1px solid #e0e0e0; border-radius: 12px;
+                     padding: 20px 24px; margin-bottom: 28px;
+                     border-left: 4px solid #667eea; }
+  .summary-section h2 { font-size: 1em; color: #667eea; margin-bottom: 12px;
+                         font-weight: 600; letter-spacing: 0.5px; }
+  .summary-section p { margin: 0; line-height: 1.8; color: #444; font-size: 0.92em; }
+  .summary-section strong { color: #2c3e50; }
+
+  /* Category sections */
+  .category { margin-bottom: 32px; }
+  .category h2 { border-bottom: 2px solid #4a90d9; padding-bottom: 6px; margin-bottom: 16px;
+                 color: #2c3e50; font-size: 1.2em; }
+  .paper { background: #fff; border: 1px solid #e0e0e0; border-radius: 8px; padding: 16px;
+           margin-bottom: 12px; }
+  .paper-title { font-size: 1.05em; font-weight: 600; }
+  .paper-title a { color: #1a0dab; text-decoration: none; }
+  .paper-title a:hover { text-decoration: underline; }
+  .score { display: inline-block; background: #4a90d9; color: #fff; border-radius: 4px;
+           padding: 2px 8px; font-size: 0.85em; margin-left: 8px; }
+  .paper .summary { margin: 8px 0; color: #444; line-height: 1.6; }
+  .tags { margin-top: 6px; }
+  .tag { display: inline-block; background: #e8f0fe; color: #1967d2; border-radius: 3px;
+         padding: 2px 8px; font-size: 0.8em; margin-right: 4px; margin-bottom: 4px; }
+  .authors { font-size: 0.85em; color: #888; margin-top: 4px; }
+  .author-affil { color: #666; font-style: italic; }
+  .h-index { display: inline-block; background: #e8f5e9; color: #2e7d32; border-radius: 3px;
+             padding: 1px 6px; font-size: 0.75em; margin-left: 2px; font-weight: 600; }
+  .h-badge { display: inline-block; background: #fff3e0; color: #e65100; border-radius: 4px;
+             padding: 2px 6px; font-size: 0.8em; margin-left: 8px; }
+  .venue { display: inline-block; background: #f3e5f5; color: #7b1fa2; border-radius: 3px;
+           padding: 2px 8px; font-size: 0.8em; margin-left: 8px; }
+  .citation-badge { display: inline-block; background: #e3f2fd; color: #1565c0; border-radius: 3px;
+                    padding: 2px 8px; font-size: 0.8em; margin-left: 4px; }
+  .tldr { font-size: 0.88em; color: #555; margin: 4px 0; font-style: italic; }
+
+  /* Responsive */
+  @media (max-width: 768px) {
+    .layout { flex-direction: column; }
+    .sidebar { width: 100%; height: auto; position: static; border-right: none;
+               border-bottom: 1px solid #e0e0e0; padding: 12px 16px; }
+    .sidebar-nav { display: flex; flex-wrap: wrap; gap: 4px; }
+    .sidebar-nav li { margin-bottom: 0; }
+    .main { padding: 16px; }
+  }
+</style>
+</head>
+<body>
+<div class="layout">
+
+<!-- Sidebar -->
+<aside class="sidebar">
+  <a href="index.html" class="sidebar-back">&larr; 返回索引</a>
+  <h3>分类导航</h3>
+  <ul class="sidebar-nav">
+    
+    <li><a href="#summary">今日热点</a></li>
+    
+    
+    <li><a href="#cat-1" data-cat="1">多模态大模型 <span class="nav-count">5</span></a></li>
+    
+    <li><a href="#cat-2" data-cat="2">图像生成 <span class="nav-count">10</span></a></li>
+    
+    <li><a href="#cat-3" data-cat="3">视频算法 <span class="nav-count">1</span></a></li>
+    
+    <li><a href="#cat-4" data-cat="4">底层视觉 <span class="nav-count">1</span></a></li>
+    
+    <li><a href="#cat-5" data-cat="5">AI Agent <span class="nav-count">2</span></a></li>
+    
+  </ul>
+  <div class="sidebar-meta">
+    2026-04-23<br>共 19 篇
+  </div>
+</aside>
+
+<!-- Main Content -->
+<main class="main">
+  <h1>Paper Tracker</h1>
+  <p class="meta">2026-04-23 &middot; 19 papers</p>
+
+  
+  <section class="summary-section" id="summary">
+    <h2>今日热点总结</h2>
+    <p><strong>多模态大模型</strong>：聚焦解决视觉语言模型的幻觉问题与推理能力不足，并拓展至个性化图像美学评估、医疗影像理解等垂直应用。</p>
+<p><strong>图像生成</strong>：围绕扩散模型，重点发展可控的个性化定制技术与安全概念擦除，同时探索多主体生成与高效微调方法。</p>
+<p><strong>视频算法</strong>：致力于提升参考到视频生成中的跨模态特征对齐与语义一致性。</p>
+<p><strong>底层视觉</strong>：强调面向下游任务（如视觉搜索）的个性化图像增强优化。</p>
+<p><strong>AI Agent</strong>：关注提升LLM智能体的复杂推理（如定理证明）与空间推理能力，并建立专门的诊断评估基准。</p>
+<p><strong>跨领域趋势</strong>：共同追求模型可靠性、可控性与效率，尤其注重个性化定制场景下的安全约束、人机交互反馈与精细化评估。</p>
+  </section>
+  
+
+  
+  <div class="category" id="cat-1">
+    <h2>多模态大模型 (5)</h2>
+    
+    <div class="paper">
+      <div class="paper-title">
+        <a href="https://huggingface.co/papers/2604.17982" target="_blank">Mitigating Multimodal Hallucination via Phase-wise Self-reward</a>
+        <span class="score">9.0</span>
+        
+        
+      </div>
+      <div class="tldr">The proposed PSRD significantly reduces the hallucination rate of LLaVA-1.5-7B by 50.0% and consistently outperforms existing post-hoc methods across five hallucination evaluation benchmarks for four LVLMs.</div>
+      <div class="summary">提出一种基于阶段性自奖励的框架，用于在线缓解大型视觉语言模型中的幻觉问题。</div>
+      <div class="tags">
+        
+        <span class="tag">hallucination</span>
+        
+        <span class="tag">LVLMs</span>
+        
+        <span class="tag">self-reward</span>
+        
+      </div>
+      <div class="authors">
+        
+          Yu Zhang <span class="author-affil">(Harbin Institute of Technology)</span> <span class="h-index">h=2</span>, Chuyang Sun <span class="author-affil">(Harbin Institute of Technology)</span> <span class="h-index">h=2</span>, Kehai Chen <span class="author-affil">(Harbin Institute of Technology)</span> <span class="h-index">h=10</span>, Xuefeng Bai <span class="author-affil">(Harbin Institute of Technology)</span> <span class="h-index">h=8</span>, Yang Xiang <span class="author-affil">(Peng Cheng Laboratory)</span> <span class="h-index">h=8</span>, Min Zhang <span class="author-affil">(Harbin Institute of Technology)</span>
+          <span class="h-badge">max h=10</span>
+        
+      </div>
+    </div>
+    
+    <div class="paper">
+      <div class="paper-title">
+        <a href="https://arxiv.org/abs/2604.11374" target="_blank">What Do Vision-Language Models Encode for Personalized Image Aesthetics Assessment?</a>
+        <span class="score">7.0</span>
+        
+        
+      </div>
+      <div class="tldr">This paper first analyzes the internal representations of VLMs to examine the presence and distribution of such aesthetic attributes, and then leverage them for lightweight, individual-level personalization without model fine-tuning, and demonstrates that simple linear models can perform PIAA effectively.</div>
+      <div class="summary">分析视觉语言模型内部表示中编码的美学属性，并利用其进行轻量级个性化图像美学评估。</div>
+      <div class="tags">
+        
+        <span class="tag">vision-language models</span>
+        
+        <span class="tag">aesthetics</span>
+        
+        <span class="tag">personalization</span>
+        
+      </div>
+      <div class="authors">
+        
+          Koki Ryu <span class="h-index">h=2</span>, Hitomi Yanaka <span class="h-index">h=12</span>
+          <span class="h-badge">max h=12</span>
+        
+      </div>
+    </div>
+    
+    <div class="paper">
+      <div class="paper-title">
+        <a href="https://www.semanticscholar.org/paper/04913f7722bdf648087854d65877d200b44e2a14" target="_blank">AugMMRev: An LLM-Augmented Multimodal Ranking Model for Personalized Image Material Retrieval</a>
+        <span class="score">7.0</span>
+        <span class="venue">IEEE transactions on consumer electronics</span>
+        <span class="citation-badge">4 citations</span>
+      </div>
+      
+      <div class="summary">提出AugMMRev，一种LLM增强的多模态排名模型，用于个性化图像材料检索，提升检索准确性。</div>
+      <div class="tags">
+        
+        <span class="tag">multimodal</span>
+        
+        <span class="tag">image retrieval</span>
+        
+        <span class="tag">LLM</span>
+        
+      </div>
+      <div class="authors">
+        
+          Yu Li, Jiaxuan He, Xiaoxiao Chen, Zhongli Wang, Zhengyu Chen, Q. Niu, Zulong Chen, Wenjian Xu, Yuyu Yin
+        
+      </div>
+    </div>
+    
+    <div class="paper">
+      <div class="paper-title">
+        <a href="https://arxiv.org/abs/2604.18250" target="_blank">Medical Image Understanding Improves Survival Prediction via Visual Instruction Tuning</a>
+        <span class="score">7.0</span>
+        
+        
+      </div>
+      <div class="tldr">This work proposes a vision-language framework for 3D CT image understanding that leverages large-scale open-sourced CT images paired with radiology reports through visual instruction tuning that improves survival prediction from CT images and clinical data while generating clinically meaningful language responses to predefined questions.</div>
+      <div class="summary">提出一种视觉语言框架，通过视觉指令调优理解3D CT图像，改进生存预测并生成临床相关语言响应。</div>
+      <div class="tags">
+        
+        <span class="tag">vision-language models</span>
+        
+        <span class="tag">medical imaging</span>
+        
+        <span class="tag">survival prediction</span>
+        
+      </div>
+      <div class="authors">
+        
+          Xixi Liu <span class="author-affil">(Chalmers University of Technology)</span> <span class="h-index">h=3</span>, J. Lazo <span class="h-index">h=5</span>, A. Hallqvist <span class="h-index">h=3</span>, Mikael Johansson <span class="h-index">h=1</span>, AAse Johnsson <span class="h-index">h=0</span>, J. Andersson, E. Eklund, P. Sund, Nasser Hosseini, Jennifer Alv'en, I. Haggstrom
+          <span class="h-badge">max h=5</span>
+        
+      </div>
+    </div>
+    
+    <div class="paper">
+      <div class="paper-title">
+        <a href="https://arxiv.org/abs/2601.03331" target="_blank">MMErroR: A Benchmark for Erroneous Reasoning in Vision-Language Models</a>
+        <span class="score">7.0</span>
+        <span class="venue">arXiv.org</span>
+        <span class="citation-badge">3 citations</span>
+      </div>
+      <div class="tldr">A process-level, error-centric evaluation that requires models to detect incorrect reasoning and classify the error type within both visual and linguistic contexts, and the ability to accurately identify errors offers valuable insights into the capabilities of multi-modal models.</div>
+      <div class="summary">该论文提出了一个名为MMErroR的基准测试，用于评估视觉语言模型中的错误推理能力。</div>
+      <div class="tags">
+        
+        <span class="tag">benchmark</span>
+        
+        <span class="tag">vision-language models</span>
+        
+        <span class="tag">reasoning</span>
+        
+        <span class="tag">evaluation</span>
+        
+      </div>
+      <div class="authors">
+        
+          Yang Shi <span class="h-index">h=1</span>, Yifeng Xie <span class="h-index">h=0</span>, Minzhe Guo <span class="h-index">h=1</span>, Liangsi Lu <span class="h-index">h=1</span>, Mingxuan Huang <span class="h-index">h=1</span>, Jingchao Wang <span class="h-index">h=1</span>, Zhihong Zhu, Bo Xu, Zhiqi Huang
+          <span class="h-badge">max h=1</span>
+        
+      </div>
+    </div>
+    
+  </div>
+  
+  <div class="category" id="cat-2">
+    <h2>图像生成 (10)</h2>
+    
+    <div class="paper">
+      <div class="paper-title">
+        <a href="https://huggingface.co/papers/2604.18518" target="_blank">UDM-GRPO: Stable and Efficient Group Relative Policy Optimization for Uniform Discrete Diffusion Models</a>
+        <span class="score">9.0</span>
+        
+        
+      </div>
+      <div class="tldr">This work proposes UDM-GRPO, the first framework to integrate UDM with RL, and significantly improves base model performance across multiple T2I tasks, achieving state-of-the-art performance in both continuous and discrete settings.</div>
+      <div class="summary">提出首个将均匀离散扩散模型与强化学习集成的框架，显著提升文本到图像生成的性能。</div>
+      <div class="tags">
+        
+        <span class="tag">diffusion models</span>
+        
+        <span class="tag">RL</span>
+        
+        <span class="tag">text-to-image</span>
+        
+      </div>
+      <div class="authors">
+        
+          Jiaqi Wang <span class="h-index">h=3</span>, Haoge Deng <span class="h-index">h=6</span>, Ting Pan <span class="author-affil">(Alibaba-ATH)</span> <span class="h-index">h=6</span>, Yang Liu <span class="h-index">h=6</span>, Chengyuan Wang <span class="h-index">h=3</span>, Fan Zhang, Yonggang Qi, Xinlong Wang, Telecommunications, Beijing Academy of Artificial Intelligence
+          <span class="h-badge">max h=6</span>
+        
+      </div>
+    </div>
+    
+    <div class="paper">
+      <div class="paper-title">
+        <a href="https://arxiv.org/abs/2602.19083" target="_blank">ChordEdit: One-Step Low-Energy Transport for Image Editing</a>
+        <span class="score">8.0</span>
+        <span class="venue">arXiv.org</span>
+        <span class="citation-badge">2 citations</span>
+      </div>
+      <div class="tldr">ChordEdit is introduced, a model agnostic, training-free, and inversion-free method that facilitates high-fidelity one-step editing on T2I models and recast editing as a transport problem between the source and target distributions defined by the source and target text prompts.</div>
+      <div class="summary">引入ChordEdit方法，利用动态最优传输理论实现高保真的单步文本引导图像编辑。</div>
+      <div class="tags">
+        
+        <span class="tag">image editing</span>
+        
+        <span class="tag">optimal transport</span>
+        
+        <span class="tag">diffusion models</span>
+        
+      </div>
+      <div class="authors">
+        
+          Liangsi Lu <span class="h-index">h=1</span>, Xuhang Chen <span class="author-affil">(University of Macau)</span> <span class="h-index">h=18</span>, Minzhe Guo <span class="h-index">h=1</span>, Shichuo Li <span class="h-index">h=1</span>, Jingchao Wang <span class="h-index">h=1</span>, Yang Shi <span class="h-index">h=1</span>
+          <span class="h-badge">max h=18</span>
+        
+      </div>
+    </div>
+    
+    <div class="paper">
+      <div class="paper-title">
+        <a href="https://www.semanticscholar.org/paper/ab476a3cab12d9bd271c472a2e6e5888733ce821" target="_blank">Object Fusion via Diffusion Time-step for Customized Image Editing with Single Example</a>
+        <span class="score">7.0</span>
+        <span class="venue">AAAI Conference on Artificial Intelligence</span>
+        
+      </div>
+      <div class="tldr">TimeFusion is proposed, which learns a time-step-specific LoRA fusion weight that resolves the trade-off between source and reference subject in high fidelity given their respective prompt, and can customize image editing using this weight and a target prompt.</div>
+      <div class="summary">提出TimeFusion方法，通过学习时间步特定的LoRA融合权重来解决单示例定制图像编辑中的保真度权衡问题。</div>
+      <div class="tags">
+        
+        <span class="tag">image editing</span>
+        
+        <span class="tag">LoRA</span>
+        
+        <span class="tag">diffusion models</span>
+        
+      </div>
+      <div class="authors">
+        
+          Xue Song, Zhongqi Yue, Jiequan Cui, Hanwang Zhang, Jingjing Chen
+        
+      </div>
+    </div>
+    
+    <div class="paper">
+      <div class="paper-title">
+        <a href="https://arxiv.org/abs/2604.16481" target="_blank">Erasing Thousands of Concepts: Towards Scalable and Practical Concept Erasure for Text-to-Image Diffusion Models</a>
+        <span class="score">8.0</span>
+        
+        
+      </div>
+      <div class="tldr">This work presents Erasing Thousands of Concepts (ETC), a scalable framework capable of erasing thousands of concepts while preserving generation quality and achieves robustness to white-box attack such as module removal.</div>
+      <div class="summary">提出ETC框架，能够扩展至擦除数千个概念，同时保持文本到图像扩散模型的生成质量。</div>
+      <div class="tags">
+        
+        <span class="tag">concept erasure</span>
+        
+        <span class="tag">diffusion models</span>
+        
+        <span class="tag">safety</span>
+        
+      </div>
+      <div class="authors">
+        
+          H. Seo <span class="h-index">h=5</span>, Byung Hyun Lee <span class="h-index">h=5</span>, Jaehyun Cho <span class="h-index">h=0</span>, Sungjin Lim <span class="h-index">h=2</span>, Se Young Chun <span class="h-index">h=3</span>
+          <span class="h-badge">max h=5</span>
+        
+      </div>
+    </div>
+    
+    <div class="paper">
+      <div class="paper-title">
+        <a href="https://arxiv.org/abs/2603.15679" target="_blank">IdentityGuard: Context-Aware Restriction and Provenance for Personalized Synthesis</a>
+        <span class="score">7.0</span>
+        
+        
+      </div>
+      <div class="tldr">This work presents IDENTITYGUARD, which realizes the principle that security should be as context-aware as the threat itself, intrinsically bound to the personalized concept through a conditional restriction that blocks harmful content only when combined with the personalized identity, and a concept-specific watermark for precise traceability.</div>
+      <div class="summary">提出IDENTITYGUARD方法，通过上下文感知限制和概念特定水印，确保个性化合成模型的安全性和实用性。</div>
+      <div class="tags">
+        
+        <span class="tag">personalization</span>
+        
+        <span class="tag">safety</span>
+        
+        <span class="tag">image generation</span>
+        
+      </div>
+      <div class="authors">
+        
+          Lingyun Zhang <span class="h-index">h=2</span>, Yu Xie <span class="h-index">h=0</span>, Ping Chen <span class="h-index">h=2</span>
+          <span class="h-badge">max h=2</span>
+        
+      </div>
+    </div>
+    
+    <div class="paper">
+      <div class="paper-title">
+        <a href="https://arxiv.org/abs/2604.18537" target="_blank">MetaCloak-JPEG: JPEG-Robust Adversarial Perturbation for Preventing Unauthorized DreamBooth-Based Deepfake Generation</a>
+        <span class="score">8.0</span>
+        
+        
+      </div>
+      <div class="tldr">MetaCloak-JPEG is introduced, which closes this gap by inserting a Differentiable JPEG (DiffJPEG) layer built on the Straight-Through Estimator (STE): the forward pass applies standard JPEG compression, while the backward pass replaces round() with the identity.</div>
+      <div class="summary">引入MetaCloak-JPEG，一种JPEG鲁棒的对抗性扰动方法，用于防止未经授权的DreamBooth深度伪造生成。</div>
+      <div class="tags">
+        
+        <span class="tag">adversarial perturbation</span>
+        
+        <span class="tag">DreamBooth</span>
+        
+        <span class="tag">JPEG</span>
+        
+      </div>
+      <div class="authors">
+        
+          Tanjim Rahaman Fardin <span class="h-index">h=0</span>, S. Alam <span class="h-index">h=1</span>, Mahadi Hasan Fahim <span class="h-index">h=0</span>, Md Faysal Mahfuz <span class="h-index">h=0</span>
+          <span class="h-badge">max h=1</span>
+        
+      </div>
+    </div>
+    
+    <div class="paper">
+      <div class="paper-title">
+        <a href="https://arxiv.org/abs/2604.13938" target="_blank">ASTRA: Enhancing Multi-Subject Generation with Retrieval-Augmented Pose Guidance and Disentangled Position Embedding</a>
+        <span class="score">8.0</span>
+        
+        
+      </div>
+      <div class="tldr">ASTRA(Adaptive Synthesis through Targeted Retrieval Augmentation), a novel framework that architecturally disentangles subject appearance from pose structure within a unified Diffusion Transformer, achieves a new state-of-the-art in pose adherence, while maintaining high identity fidelity and text alignment in DreamBench.</div>
+      <div class="summary">提出ASTRA框架，通过检索增强姿势指导和解耦位置嵌入，提升扩散变换器中多主题图像生成的性能。</div>
+      <div class="tags">
+        
+        <span class="tag">multi-subject generation</span>
+        
+        <span class="tag">diffusion transformer</span>
+        
+        <span class="tag">retrieval-augmented</span>
+        
+      </div>
+      <div class="authors">
+        
+          Tianze Xia <span class="h-index">h=1</span>, Zijian Ning <span class="h-index">h=0</span>, Zonglin Zhao <span class="h-index">h=0</span>, Mingjia Wang <span class="h-index">h=1</span>
+          <span class="h-badge">max h=1</span>
+        
+      </div>
+    </div>
+    
+    <div class="paper">
+      <div class="paper-title">
+        <a href="https://www.semanticscholar.org/paper/78403ec865036d624636dcab6a2dca60d0fdaae4" target="_blank">End-to-End Multi-Entity Customization</a>
+        <span class="score">7.0</span>
+        <span class="venue">IET Image Processing</span>
+        
+      </div>
+      <div class="tldr">This paper proposes a modifier‐based approach to mitigate concept‐mixing by addressing the interaction among text tokens, and demonstrates that this method effectively resolves concept‐mixing issues to better preserve concepts' identities and outperforms recent baselines in both quantitative and qualitative results.</div>
+      <div class="summary">提出一种基于修改器的方法，缓解文本到图像模型中多实体定制时的概念混合问题，保持身份一致性。</div>
+      <div class="tags">
+        
+        <span class="tag">personalization</span>
+        
+        <span class="tag">text-to-image</span>
+        
+        <span class="tag">multi-entity</span>
+        
+      </div>
+      <div class="authors">
+        
+          Wonhark Park, Jaehyun Lee, Wonsik Shin, Junhoo Lee, N. Kwak
+        
+      </div>
+    </div>
+    
+    <div class="paper">
+      <div class="paper-title">
+        <a href="https://arxiv.org/abs/2603.21884" target="_blank">Not All Layers Are Created Equal: Adaptive LoRA Ranks for Personalized Image Generation</a>
+        <span class="score">7.0</span>
+        
+        
+      </div>
+      <div class="tldr">Inspired by variational methods that learn an adaptive width of neural networks, the ranks of each layer freely adapt during fine-tuning on a subject by imposing an ordering of importance on the rank's positions, effectively encouraging the creation of higher ranks when strictly needed.</div>
+      <div class="summary">提出自适应LoRA秩的方法，在个性化图像生成中平衡性能和内存消耗，根据需要动态调整秩。</div>
+      <div class="tags">
+        
+        <span class="tag">LoRA</span>
+        
+        <span class="tag">personalization</span>
+        
+        <span class="tag">diffusion models</span>
+        
+      </div>
+      <div class="authors">
+        
+          Donald Shenaj <span class="h-index">h=6</span>, Federico Errica <span class="h-index">h=4</span>, Antonio Carta <span class="h-index">h=3</span>
+          <span class="h-badge">max h=6</span>
+        
+      </div>
+    </div>
+    
+    <div class="paper">
+      <div class="paper-title">
+        <a href="https://arxiv.org/abs/2602.02388" target="_blank">Personalized Image Generation via Human-in-the-loop Bayesian Optimization</a>
+        <span class="score">8.0</span>
+        <span class="venue">arXiv.org</span>
+        <span class="citation-badge">1 citations</span>
+      </div>
+      <div class="tldr">MultiBO (Multi-Choice Preferential Bayesian Optimization) is developed that carefully generates new images as a function of Alice's specific image, gets preferential feedback from the user, uses the feedback to guide the diffusion model, and ultimately generates a new set of images.</div>
+      <div class="summary">开发MultiBO方法，通过多选择偏好贝叶斯优化和人类反馈，引导扩散模型生成更接近用户目标的图像。</div>
+      <div class="tags">
+        
+        <span class="tag">Bayesian optimization</span>
+        
+        <span class="tag">human-in-the-loop</span>
+        
+        <span class="tag">personalization</span>
+        
+      </div>
+      <div class="authors">
+        
+          Rajalaxmi Rajagopalan <span class="h-index">h=1</span>, Debottam Dutta <span class="h-index">h=5</span>, Yu-Lin Wei <span class="h-index">h=2</span>, Romit Roy Choudhury <span class="h-index">h=54</span>
+          <span class="h-badge">max h=54</span>
+        
+      </div>
+    </div>
+    
+  </div>
+  
+  <div class="category" id="cat-3">
+    <h2>视频算法 (1)</h2>
+    
+    <div class="paper">
+      <div class="paper-title">
+        <a href="https://arxiv.org/abs/2603.25743" target="_blank">RefAlign: Representation Alignment for Reference-to-Video Generation</a>
+        <span class="score">8.0</span>
+        
+        
+      </div>
+      <div class="tldr">The core of RefAlign is a reference alignment loss that pulls the reference features and VFM features of the same subject closer to improve identity consistency, while pushing apart the corresponding features of different subjects to enhance semantic discriminability.</div>
+      <div class="summary">提出RefAlign框架，通过显式对齐参考分支特征到视觉基础模型语义空间，提升参考到视频生成的一致性。</div>
+      <div class="tags">
+        
+        <span class="tag">video generation</span>
+        
+        <span class="tag">reference-to-video</span>
+        
+        <span class="tag">feature alignment</span>
+        
+      </div>
+      <div class="authors">
+        
+          Lei Wang <span class="h-index">h=3</span>, Yuxin Song <span class="h-index">h=8</span>, Gennady Wu <span class="h-index">h=0</span>, Haocheng Feng <span class="h-index">h=21</span>, Hang Zhou <span class="h-index">h=3</span>, Jingdong Wang, Yaxing Wang, Jian Yang
+          <span class="h-badge">max h=21</span>
+        
+      </div>
+    </div>
+    
+  </div>
+  
+  <div class="category" id="cat-4">
+    <h2>底层视觉 (1)</h2>
+    
+    <div class="paper">
+      <div class="paper-title">
+        <a href="https://www.semanticscholar.org/paper/db768137eebed346c78be1d7a9ca6edbefe7d6ec" target="_blank">Personalized Image Enhancement for Visual Search Task</a>
+        <span class="score">8.0</span>
+        <span class="venue">IEEE Access</span>
+        
+      </div>
+      
+      <div class="summary">提出一种个性化图像增强系统，通过人在回路强化学习优化显示，提升视觉搜索任务的效率。</div>
+      <div class="tags">
+        
+        <span class="tag">image enhancement</span>
+        
+        <span class="tag">reinforcement learning</span>
+        
+        <span class="tag">visual search</span>
+        
+      </div>
+      <div class="authors">
+        
+          Yuma Mabuchi, Yuko Ozasa
+        
+      </div>
+    </div>
+    
+  </div>
+  
+  <div class="category" id="cat-5">
+    <h2>AI Agent (2)</h2>
+    
+    <div class="paper">
+      <div class="paper-title">
+        <a href="https://arxiv.org/abs/2603.13033" target="_blank">ESPIRE: A Diagnostic Benchmark for Embodied Spatial Reasoning of Vision-Language Models</a>
+        <span class="score">7.0</span>
+        
+        
+      </div>
+      <div class="tldr">This work uses ESPIRE to diagnose a range of frontier VLMs and provide in-depth analysis of their spatial reasoning behaviors, and systematically design ESPIRE both at the instruction level and at the environment level, ensuring broad coverage of spatial reasoning scenarios.</div>
+      <div class="summary">该论文提出了ESPIRE，一个用于评估视觉语言模型在具身空间推理能力上的诊断基准。</div>
+      <div class="tags">
+        
+        <span class="tag">benchmark</span>
+        
+        <span class="tag">embodied AI</span>
+        
+        <span class="tag">spatial reasoning</span>
+        
+        <span class="tag">vision-language models</span>
+        
+      </div>
+      <div class="authors">
+        
+          Yanpeng Zhao <span class="h-index">h=1</span>, Wentao Ding <span class="h-index">h=5</span>, Hongtao Li <span class="h-index">h=0</span>, Baoxiong Jia <span class="h-index">h=25</span>, Zilong Zheng <span class="h-index">h=5</span>
+          <span class="h-badge">max h=25</span>
+        
+      </div>
+    </div>
+    
+    <div class="paper">
+      <div class="paper-title">
+        <a href="https://arxiv.org/abs/2604.19558" target="_blank">On Reasoning-Centric LLM-based Automated Theorem Proving</a>
+        <span class="score">8.0</span>
+        
+        
+      </div>
+      <div class="tldr">ReCent-Prover is introduced, a reasoning-centric LLM-based proof agent for Rocq that addresses two critical limitations in current systems and achieves a relative improvement in the number of proved theorems over the previous state-of-the-art.</div>
+      <div class="summary">该论文提出了ReCent-Prover，一个基于推理的LLM自动定理证明代理，通过验证与反思和检索与规划来提升证明能力。</div>
+      <div class="tags">
+        
+        <span class="tag">automated theorem proving</span>
+        
+        <span class="tag">LLM</span>
+        
+        <span class="tag">reasoning</span>
+        
+        <span class="tag">agent</span>
+        
+      </div>
+      <div class="authors">
+        
+          Yican Sun <span class="h-index">h=4</span>, Chengwei Shi <span class="h-index">h=1</span>, Hangzhou Lyu <span class="h-index">h=0</span>, Yingfei Xiong <span class="h-index">h=1</span>
+          <span class="h-badge">max h=4</span>
+        
+      </div>
+    </div>
+    
+  </div>
+  
+</main>
+</div>
+
+<script>
+(function() {
+  var sections = document.querySelectorAll('.category, .summary-section');
+  var links = document.querySelectorAll('.sidebar-nav a');
+  if (!sections.length || !links.length) return;
+
+  var observer = new IntersectionObserver(function(entries) {
+    entries.forEach(function(entry) {
+      if (entry.isIntersecting) {
+        links.forEach(function(l) { l.classList.remove('active'); });
+        var id = entry.target.id;
+        var active = document.querySelector('.sidebar-nav a[href="#' + id + '"]');
+        if (active) active.classList.add('active');
+      }
+    });
+  }, { rootMargin: '-20% 0px -60% 0px' });
+
+  sections.forEach(function(s) { observer.observe(s); });
+})();
+</script>
+</body>
+</html>
