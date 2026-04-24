@@ -1,0 +1,417 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Paper Tracker - 2026-04-24</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+         color: #333; background: #fafafa; }
+
+  .layout { display: flex; max-width: 1200px; margin: 0 auto; }
+
+  /* Sidebar */
+  .sidebar { width: 220px; position: sticky; top: 0; height: 100vh; overflow-y: auto;
+             padding: 20px 16px; border-right: 1px solid #e0e0e0; background: #fff; flex-shrink: 0; }
+  .sidebar h3 { font-size: 0.85em; color: #666; text-transform: uppercase; letter-spacing: 0.5px;
+                margin-bottom: 12px; }
+  .sidebar-nav { list-style: none; }
+  .sidebar-nav li { margin-bottom: 4px; }
+  .sidebar-nav a { display: block; padding: 6px 10px; border-radius: 6px; color: #333;
+                   text-decoration: none; font-size: 0.9em; transition: background 0.15s; }
+  .sidebar-nav a:hover { background: #e8f0fe; }
+  .sidebar-nav a.active { background: #4a90d9; color: #fff; }
+  .sidebar-nav .nav-count { float: right; color: #999; font-size: 0.8em; }
+  .sidebar-nav a.active .nav-count { color: rgba(255,255,255,0.8); }
+  .sidebar-back { display: block; margin-bottom: 20px; color: #4a90d9; text-decoration: none;
+                  font-size: 0.9em; }
+  .sidebar-meta { font-size: 0.8em; color: #999; margin-top: 16px; padding-top: 12px;
+                  border-top: 1px solid #eee; }
+
+  /* Main content */
+  .main { flex: 1; min-width: 0; padding: 24px 32px; }
+
+  h1 { margin-bottom: 8px; font-size: 1.6em; }
+  .meta { color: #666; margin-bottom: 24px; }
+
+  /* Summary section */
+  .summary-section { background: #fff; border: 1px solid #e0e0e0; border-radius: 12px;
+                     padding: 20px 24px; margin-bottom: 28px;
+                     border-left: 4px solid #667eea; }
+  .summary-section h2 { font-size: 1em; color: #667eea; margin-bottom: 12px;
+                         font-weight: 600; letter-spacing: 0.5px; }
+  .summary-section p { margin: 0; line-height: 1.8; color: #444; font-size: 0.92em; }
+  .summary-section strong { color: #2c3e50; }
+
+  /* Category sections */
+  .category { margin-bottom: 32px; }
+  .category h2 { border-bottom: 2px solid #4a90d9; padding-bottom: 6px; margin-bottom: 16px;
+                 color: #2c3e50; font-size: 1.2em; }
+  .paper { background: #fff; border: 1px solid #e0e0e0; border-radius: 8px; padding: 16px;
+           margin-bottom: 12px; }
+  .paper-title { font-size: 1.05em; font-weight: 600; }
+  .paper-title a { color: #1a0dab; text-decoration: none; }
+  .paper-title a:hover { text-decoration: underline; }
+  .score { display: inline-block; background: #4a90d9; color: #fff; border-radius: 4px;
+           padding: 2px 8px; font-size: 0.85em; margin-left: 8px; }
+  .paper .summary { margin: 8px 0; color: #444; line-height: 1.6; }
+  .tags { margin-top: 6px; }
+  .tag { display: inline-block; background: #e8f0fe; color: #1967d2; border-radius: 3px;
+         padding: 2px 8px; font-size: 0.8em; margin-right: 4px; margin-bottom: 4px; }
+  .authors { font-size: 0.85em; color: #888; margin-top: 4px; }
+  .author-names { line-height: 1.6; }
+  .author-affiliations { margin-top: 3px; }
+  .affil-badge { display: inline-block; background: #e8eaf6; color: #283593; border-radius: 4px;
+                 padding: 3px 10px; font-size: 0.88em; margin-right: 6px; margin-bottom: 4px;
+                 font-weight: 500; letter-spacing: 0.2px; }
+  .h-index { display: inline-block; background: #e8f5e9; color: #2e7d32; border-radius: 3px;
+             padding: 1px 6px; font-size: 0.75em; margin-left: 2px; font-weight: 600; }
+  .h-badge { display: inline-block; background: #fff3e0; color: #e65100; border-radius: 4px;
+             padding: 2px 6px; font-size: 0.8em; margin-left: 8px; }
+  .venue { display: inline-block; background: #f3e5f5; color: #7b1fa2; border-radius: 3px;
+           padding: 2px 8px; font-size: 0.8em; margin-left: 8px; }
+  .citation-badge { display: inline-block; background: #e3f2fd; color: #1565c0; border-radius: 3px;
+                    padding: 2px 8px; font-size: 0.8em; margin-left: 4px; }
+  .tldr { font-size: 0.88em; color: #555; margin: 4px 0; font-style: italic; }
+
+  /* Responsive */
+  @media (max-width: 768px) {
+    .layout { flex-direction: column; }
+    .sidebar { width: 100%; height: auto; position: static; border-right: none;
+               border-bottom: 1px solid #e0e0e0; padding: 12px 16px; }
+    .sidebar-nav { display: flex; flex-wrap: wrap; gap: 4px; }
+    .sidebar-nav li { margin-bottom: 0; }
+    .main { padding: 16px; }
+  }
+</style>
+</head>
+<body>
+<div class="layout">
+
+<!-- Sidebar -->
+<aside class="sidebar">
+  <a href="index.html" class="sidebar-back">&larr; 返回索引</a>
+  <h3>分类导航</h3>
+  <ul class="sidebar-nav">
+    
+    <li><a href="#summary">今日热点</a></li>
+    
+    
+    <li><a href="#cat-1" data-cat="1">多模态大模型 <span class="nav-count">1</span></a></li>
+    
+    <li><a href="#cat-2" data-cat="2">AI Agent <span class="nav-count">2</span></a></li>
+    
+    <li><a href="#cat-3" data-cat="3">图像生成 <span class="nav-count">2</span></a></li>
+    
+  </ul>
+  <div class="sidebar-meta">
+    2026-04-24<br>共 5 篇
+  </div>
+</aside>
+
+<!-- Main Content -->
+<main class="main">
+  <h1>Paper Tracker</h1>
+  <p class="meta">2026-04-24 &middot; 5 papers</p>
+
+  
+  <section class="summary-section" id="summary">
+    <h2>今日热点总结</h2>
+    <p><strong>多模态大模型</strong>：统一多模态理解与生成的扩散大语言模型成为新趋势。核心是架构融合与能力统一。</p>
+<p><strong>AI Agent</strong>：真实世界交互数据收集与基于物理仿真的模仿学习并行发展。关键在于数据驱动与物理仿真。</p>
+<p><strong>图像生成</strong>：Transformer架构与扩散模型结合提升效率与可控性；基于推理链的精确编辑成为新方向。</p>
+<p><strong>跨领域趋势</strong>：跨模态统一与物理仿真成为赋能AI Agent与生成式智能的核心路径。</p>
+  </section>
+  
+
+  
+  <div class="category" id="cat-1">
+    <h2>多模态大模型 (1)</h2>
+    
+    <div class="paper">
+      <div class="paper-title">
+        <a href="https://huggingface.co/papers/2604.20796" target="_blank">LLaDA2.0-Uni: Unifying Multimodal Understanding and Generation with Diffusion Large Language Model</a>
+        <span class="score">9.0</span>
+        
+        
+      </div>
+      <div class="tldr">LLaDA2.0-Uni is a unified discrete diffusion large language model (dLLM) that supports multimodal understanding and generation within a natively integrated framework that establishes a promising and scalable paradigm for next-generation unified foundation models.</div>
+      <div class="summary">提出LLaDA2.0-Uni，一个统一的离散扩散大语言模型，支持多模态理解和生成任务。</div>
+      <div class="tags">
+        
+        <span class="tag">multimodal</span>
+        
+        <span class="tag">diffusion model</span>
+        
+        <span class="tag">large language model</span>
+        
+        <span class="tag">image generation</span>
+        
+      </div>
+      <div class="authors">
+        
+          <div class="author-names">
+            Inclusion AI <span class="h-index">h=3</span>, Tiwei Bie <span class="h-index">h=4</span>, Haoxing Chen <span class="h-index">h=12</span>, Tieyuan Chen, Zhenglin Cheng <span class="h-index">h=4</span>, Long Cui, Kai Gan, Zhicheng Huang, Zhenzhong Lan, Haoquan Li, Jianguo Li, Tao Lin, Qi Qin, Hongjun Wang, Xiaomei Wang, Haoyuan Wu, Yi Xin, Junbo Zhao
+            <span class="h-badge">max h=12</span>
+          </div>
+          
+          
+            
+          
+            
+          
+            
+          
+            
+          
+            
+              
+            
+          
+            
+          
+            
+          
+            
+          
+            
+          
+            
+          
+            
+          
+            
+              
+            
+          
+            
+          
+            
+          
+            
+          
+            
+          
+            
+          
+            
+          
+          
+          <div class="author-affiliations">
+            <span class="affil-badge">Zhejiang University</span><span class="affil-badge">Imperial College London</span>
+          </div>
+          
+        
+      </div>
+    </div>
+    
+  </div>
+  
+  <div class="category" id="cat-2">
+    <h2>AI Agent (2)</h2>
+    
+    <div class="paper">
+      <div class="paper-title">
+        <a href="https://huggingface.co/papers/2604.20779" target="_blank">SWE-chat: Coding Agent Interactions From Real Users in the Wild</a>
+        <span class="score">8.0</span>
+        
+        
+      </div>
+      <div class="tldr">SWE-chat, the first large-scale dataset of real coding agent sessions collected from open-source developers in the wild, is presented, finding that coding patterns are bimodal: in 41% of sessions, agents author virtually all committed code ("vibe coding"), while in 23%, humans write all code themselves.</div>
+      <div class="summary">提出SWE-chat数据集，首次大规模收集真实世界中编码代理的交互数据，用于分析AI代理的使用和失败模式。</div>
+      <div class="tags">
+        
+        <span class="tag">AI agent</span>
+        
+        <span class="tag">coding agent</span>
+        
+        <span class="tag">dataset</span>
+        
+        <span class="tag">tool use</span>
+        
+      </div>
+      <div class="authors">
+        
+          <div class="author-names">
+            Joachim Baumann <span class="h-index">h=3</span>, Vishakh Padmakumar <span class="h-index">h=18</span>, Xiang Li, John Yang <span class="h-index">h=2</span>, Diyi Yang <span class="h-index">h=4</span>, Sanmi Koyejo
+            <span class="h-badge">max h=18</span>
+          </div>
+          
+          
+            
+              
+            
+          
+            
+          
+            
+          
+            
+          
+            
+          
+            
+          
+          
+          <div class="author-affiliations">
+            <span class="affil-badge">Stanford University</span>
+          </div>
+          
+        
+      </div>
+    </div>
+    
+    <div class="paper">
+      <div class="paper-title">
+        <a href="https://huggingface.co/papers/2604.20841" target="_blank">DeVI: Physics-based Dexterous Human-Object Interaction via Synthetic Video Imitation</a>
+        <span class="score">7.0</span>
+        
+        
+      </div>
+      <div class="tldr">This work presents DeVI (Dexterous Video Imitation), a novel framework that leverages text-conditioned synthetic videos to enable physically plausible dexterous agent control for interacting with unseen target objects, and introduces a hybrid tracking reward that integrates 3D human tracking with robust 2D object tracking.</div>
+      <div class="summary">提出DeVI框架，利用合成视频实现基于物理的灵巧人机交互模仿学习，用于机器人操控。</div>
+      <div class="tags">
+        
+        <span class="tag">video generation</span>
+        
+        <span class="tag">robotics</span>
+        
+        <span class="tag">imitation learning</span>
+        
+        <span class="tag">AI agent</span>
+        
+      </div>
+      <div class="authors">
+        
+          <div class="author-names">
+            Hyeonwoo Kim, Jeonghwan Kim <span class="h-index">h=2</span>, Kyungwon Cho <span class="h-index">h=2</span>, Hanbyul Joo <span class="h-index">h=1</span>
+            <span class="h-badge">max h=2</span>
+          </div>
+          
+          
+            
+              
+            
+          
+            
+          
+            
+          
+            
+              
+            
+          
+          
+          <div class="author-affiliations">
+            <span class="affil-badge">Seoul National University</span><span class="affil-badge">Seoul National University, RLWRLD</span>
+          </div>
+          
+        
+      </div>
+    </div>
+    
+  </div>
+  
+  <div class="category" id="cat-3">
+    <h2>图像生成 (2)</h2>
+    
+    <div class="paper">
+      <div class="paper-title">
+        <a href="https://www.semanticscholar.org/paper/c2fea7d6a8758739351ddc45e77023370714dbc5" target="_blank">T2I-DiT: An Efficient and Controllable Transformer Diffusion Model for Text-to-Image Generation</a>
+        <span class="score">8.0</span>
+        <span class="venue">2026 5th International Symposium on Computer Applications and Information Technology (ISCAIT)</span>
+        
+      </div>
+      
+      <div class="summary">设计T2I-DiT，一种高效可控的Transformer扩散模型，用于文本到图像生成，提升语义一致性和生成质量。</div>
+      <div class="tags">
+        
+        <span class="tag">text-to-image</span>
+        
+        <span class="tag">diffusion model</span>
+        
+        <span class="tag">transformer</span>
+        
+        <span class="tag">controllable generation</span>
+        
+      </div>
+      <div class="authors">
+        
+          Zhen Li, Haopeng Lei, H. Yin, Bo Cheng
+        
+      </div>
+    </div>
+    
+    <div class="paper">
+      <div class="paper-title">
+        <a href="https://arxiv.org/abs/2603.01586" target="_blank">InterCoG: Towards Spatially Precise Image Editing with Interleaved Chain-of-Grounding Reasoning</a>
+        <span class="score">7.0</span>
+        <span class="venue">arXiv.org</span>
+        
+      </div>
+      <div class="tldr">This work proposes InterCoG, a novel text-vision Interleaved Chain-of-Grounding reasoning framework for fine-grained image editing in complex real-world scenes and proposes two auxiliary training modules: multimodal grounding reconstruction supervision and multimodal grounding reasoning alignment to enforce spatial localization accuracy and reasoning interpretability.</div>
+      <div class="summary">提出InterCoG框架，通过交错链式接地推理实现复杂场景中的精确图像编辑。</div>
+      <div class="tags">
+        
+        <span class="tag">image editing</span>
+        
+        <span class="tag">spatial reasoning</span>
+        
+        <span class="tag">diffusion model</span>
+        
+        <span class="tag">controllable generation</span>
+        
+      </div>
+      <div class="authors">
+        
+          <div class="author-names">
+            Yecong Wan <span class="h-index">h=9</span>, Fanzhang Li <span class="h-index">h=2</span>, Chunwei Wang <span class="h-index">h=11</span>, Hao Wu <span class="h-index">h=3</span>, Mingwen Shao <span class="h-index">h=6</span>, Wangmeng Zuo
+            <span class="h-badge">max h=11</span>
+          </div>
+          
+          
+            
+          
+            
+          
+            
+          
+            
+          
+            
+          
+            
+          
+          
+        
+      </div>
+    </div>
+    
+  </div>
+  
+</main>
+</div>
+
+<script>
+(function() {
+  var sections = document.querySelectorAll('.category, .summary-section');
+  var links = document.querySelectorAll('.sidebar-nav a');
+  if (!sections.length || !links.length) return;
+
+  var observer = new IntersectionObserver(function(entries) {
+    entries.forEach(function(entry) {
+      if (entry.isIntersecting) {
+        links.forEach(function(l) { l.classList.remove('active'); });
+        var id = entry.target.id;
+        var active = document.querySelector('.sidebar-nav a[href="#' + id + '"]');
+        if (active) active.classList.add('active');
+      }
+    });
+  }, { rootMargin: '-20% 0px -60% 0px' });
+
+  sections.forEach(function(s) { observer.observe(s); });
+})();
+</script>
+</body>
+</html>
