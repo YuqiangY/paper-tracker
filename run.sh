@@ -11,7 +11,9 @@ source .env 2>/dev/null || true
 DATE=$(date +%F)
 mkdir -p data/daily
 
-echo "=== Paper Tracker: $DATE ==="
+JITTER=$((RANDOM % 900))
+echo "=== Paper Tracker: $DATE (start delay ${JITTER}s) ==="
+sleep "$JITTER"
 
 python main.py 2>&1 | tee "data/daily/${DATE}.log"
 PIPELINE_EXIT=${PIPESTATUS[0]}

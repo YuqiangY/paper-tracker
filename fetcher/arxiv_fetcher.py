@@ -1,4 +1,5 @@
 from __future__ import annotations
+import logging
 import re
 import time
 import urllib.error
@@ -7,6 +8,9 @@ import urllib.parse
 import xml.etree.ElementTree as ET
 from datetime import datetime, timedelta, timezone
 from models import Paper
+from .retry import request_with_retry
+
+log = logging.getLogger(__name__)
 
 ARXIV_API_URL = "http://export.arxiv.org/api/query"
 ATOM_NS = "http://www.w3.org/2005/Atom"
@@ -41,18 +45,14 @@ def _query_arxiv_api(category: str, max_results: int) -> str:
         "sortOrder": "descending",
     })
     url = f"{ARXIV_API_URL}?{params}"
-    for attempt in range(3):
-        try:
-            req = urllib.request.Request(url)
-            req.add_header("User-Agent", "PaperTracker/1.0")
-            with urllib.request.urlopen(req, timeout=60) as resp:
-                return resp.read().decode("utf-8")
-        except (urllib.error.HTTPError, TimeoutError, OSError) as e:
-            if attempt < 2:
-                time.sleep(15 * (attempt + 1))
-                continue
-            raise
-    return ""
+    data = request_with_retry(
+        url,
+        timeout=60,
+        max_attempts=5,
+        base_delay=15.0,
+        max_delay=180.0,
+    )
+    return data.decode("utf-8")
 
 
 def _parse_arxiv_response(xml_text: str) -> list[Paper]:

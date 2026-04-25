@@ -1,6 +1,7 @@
 from __future__ import annotations
 import logging
 import time
+import urllib.error
 from models import Paper
 from .author_enrichment import _s2_get
 
@@ -8,6 +9,8 @@ log = logging.getLogger(__name__)
 
 S2_SEARCH_URL = "https://api.semanticscholar.org/graph/v1/paper/search"
 S2_SEARCH_FIELDS = "title,authors,abstract,year,externalIds,publicationDate,venue,citationCount,tldr"
+
+CIRCUIT_BREAKER_THRESHOLD = 3
 
 
 def fetch_s2_search(
@@ -21,9 +24,21 @@ def fetch_s2_search(
         return []
 
     seen: dict[str, Paper] = {}
+    consecutive_429 = 0
 
     for query in queries:
-        papers = _search_one_query(query, year, limit_per_query, api_key, timeout)
+        if consecutive_429 >= CIRCUIT_BREAKER_THRESHOLD:
+            log.warning(
+                "S2 circuit breaker tripped after %d consecutive 429s, skipping remaining %d queries",
+                consecutive_429, len(queries) - len(seen),
+            )
+            break
+
+        papers, was_429 = _search_one_query(query, year, limit_per_query, api_key, timeout)
+        if was_429:
+            consecutive_429 += 1
+        else:
+            consecutive_429 = 0
         for p in papers:
             if p.id not in seen:
                 seen[p.id] = p
@@ -39,7 +54,8 @@ def _search_one_query(
     limit: int,
     api_key: str | None,
     timeout: int,
-) -> list[Paper]:
+) -> tuple[list[Paper], bool]:
+    """Returns (papers, was_429)."""
     params = {
         "query": query,
         "fields": S2_SEARCH_FIELDS,
@@ -50,14 +66,18 @@ def _search_one_query(
 
     try:
         data = _s2_get(S2_SEARCH_URL, params, api_key, timeout)
+    except urllib.error.HTTPError as e:
+        is_429 = e.code == 429
+        log.warning("S2 search failed for query '%s': %s", query, e)
+        return [], is_429
     except Exception as e:
         log.warning("S2 search failed for query '%s': %s", query, e)
-        return []
+        return [], False
 
     if not data or "data" not in data:
-        return []
+        return [], False
 
-    return _parse_s2_papers(data["data"])
+    return _parse_s2_papers(data["data"]), False
 
 
 def _parse_s2_papers(items: list[dict]) -> list[Paper]:
