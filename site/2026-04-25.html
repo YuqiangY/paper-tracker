@@ -1,0 +1,581 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Paper Tracker - 2026-04-25</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+         color: #333; background: #fafafa; }
+
+  .layout { display: flex; max-width: 1200px; margin: 0 auto; }
+
+  /* Sidebar */
+  .sidebar { width: 220px; position: sticky; top: 0; height: 100vh; overflow-y: auto;
+             padding: 20px 16px; border-right: 1px solid #e0e0e0; background: #fff; flex-shrink: 0; }
+  .sidebar h3 { font-size: 0.85em; color: #666; text-transform: uppercase; letter-spacing: 0.5px;
+                margin-bottom: 12px; }
+  .sidebar-nav { list-style: none; }
+  .sidebar-nav li { margin-bottom: 4px; }
+  .sidebar-nav a { display: block; padding: 6px 10px; border-radius: 6px; color: #333;
+                   text-decoration: none; font-size: 0.9em; transition: background 0.15s; }
+  .sidebar-nav a:hover { background: #e8f0fe; }
+  .sidebar-nav a.active { background: #4a90d9; color: #fff; }
+  .sidebar-nav .nav-count { float: right; color: #999; font-size: 0.8em; }
+  .sidebar-nav a.active .nav-count { color: rgba(255,255,255,0.8); }
+  .sidebar-back { display: block; margin-bottom: 20px; color: #4a90d9; text-decoration: none;
+                  font-size: 0.9em; }
+  .sidebar-meta { font-size: 0.8em; color: #999; margin-top: 16px; padding-top: 12px;
+                  border-top: 1px solid #eee; }
+
+  /* Main content */
+  .main { flex: 1; min-width: 0; padding: 24px 32px; }
+
+  h1 { margin-bottom: 8px; font-size: 1.6em; }
+  .meta { color: #666; margin-bottom: 24px; }
+
+  /* Summary section */
+  .summary-section { background: #fff; border: 1px solid #e0e0e0; border-radius: 12px;
+                     padding: 20px 24px; margin-bottom: 28px;
+                     border-left: 4px solid #667eea; }
+  .summary-section h2 { font-size: 1em; color: #667eea; margin-bottom: 12px;
+                         font-weight: 600; letter-spacing: 0.5px; }
+  .summary-section p { margin: 0; line-height: 1.8; color: #444; font-size: 0.92em; }
+  .summary-section strong { color: #2c3e50; }
+
+  /* Category sections */
+  .category { margin-bottom: 32px; }
+  .category h2 { border-bottom: 2px solid #4a90d9; padding-bottom: 6px; margin-bottom: 16px;
+                 color: #2c3e50; font-size: 1.2em; }
+  .paper { background: #fff; border: 1px solid #e0e0e0; border-radius: 8px; padding: 16px;
+           margin-bottom: 12px; }
+  .paper-title { font-size: 1.05em; font-weight: 600; }
+  .paper-title a { color: #1a0dab; text-decoration: none; }
+  .paper-title a:hover { text-decoration: underline; }
+  .score { display: inline-block; background: #4a90d9; color: #fff; border-radius: 4px;
+           padding: 2px 8px; font-size: 0.85em; margin-left: 8px; }
+  .paper .summary { margin: 8px 0; color: #444; line-height: 1.6; }
+  .tags { margin-top: 6px; }
+  .tag { display: inline-block; background: #e8f0fe; color: #1967d2; border-radius: 3px;
+         padding: 2px 8px; font-size: 0.8em; margin-right: 4px; margin-bottom: 4px; }
+  .authors { font-size: 0.85em; color: #888; margin-top: 4px; }
+  .author-names { line-height: 1.6; }
+  .author-affiliations { margin-top: 3px; }
+  .affil-badge { display: inline-block; background: #e8eaf6; color: #283593; border-radius: 4px;
+                 padding: 3px 10px; font-size: 0.88em; margin-right: 6px; margin-bottom: 4px;
+                 font-weight: 500; letter-spacing: 0.2px; }
+  .h-index { display: inline-block; background: #e8f5e9; color: #2e7d32; border-radius: 3px;
+             padding: 1px 6px; font-size: 0.75em; margin-left: 2px; font-weight: 600; }
+  .h-badge { display: inline-block; background: #fff3e0; color: #e65100; border-radius: 4px;
+             padding: 2px 6px; font-size: 0.8em; margin-left: 8px; }
+  .venue { display: inline-block; background: #f3e5f5; color: #7b1fa2; border-radius: 3px;
+           padding: 2px 8px; font-size: 0.8em; margin-left: 8px; }
+  .citation-badge { display: inline-block; background: #e3f2fd; color: #1565c0; border-radius: 3px;
+                    padding: 2px 8px; font-size: 0.8em; margin-left: 4px; }
+  .tldr { font-size: 0.88em; color: #555; margin: 4px 0; font-style: italic; }
+
+  /* Responsive */
+  @media (max-width: 768px) {
+    .layout { flex-direction: column; }
+    .sidebar { width: 100%; height: auto; position: static; border-right: none;
+               border-bottom: 1px solid #e0e0e0; padding: 12px 16px; }
+    .sidebar-nav { display: flex; flex-wrap: wrap; gap: 4px; }
+    .sidebar-nav li { margin-bottom: 0; }
+    .main { padding: 16px; }
+  }
+</style>
+</head>
+<body>
+<div class="layout">
+
+<!-- Sidebar -->
+<aside class="sidebar">
+  <a href="index.html" class="sidebar-back">&larr; 返回索引</a>
+  <h3>分类导航</h3>
+  <ul class="sidebar-nav">
+    
+    <li><a href="#summary">今日热点</a></li>
+    
+    
+    <li><a href="#cat-1" data-cat="1">图像生成 <span class="nav-count">1</span></a></li>
+    
+    <li><a href="#cat-2" data-cat="2">多模态大模型 <span class="nav-count">3</span></a></li>
+    
+    <li><a href="#cat-3" data-cat="3">视频算法 <span class="nav-count">3</span></a></li>
+    
+  </ul>
+  <div class="sidebar-meta">
+    2026-04-25<br>共 7 篇
+  </div>
+</aside>
+
+<!-- Main Content -->
+<main class="main">
+  <h1>Paper Tracker</h1>
+  <p class="meta">2026-04-25 &middot; 7 papers</p>
+
+  
+  <section class="summary-section" id="summary">
+    <h2>今日热点总结</h2>
+    <p><strong>图像生成</strong>：对抗共生、统一框架。生成与检测任务协同进化。</p>
+<p><strong>多模态大模型</strong>：模态统一、理解深化。推动多模态模型的跨模态推理、运动理解及多图像评估基准建设。</p>
+<p><strong>视频算法</strong>：时间建模、编辑高效。聚焦视频时间流理解、世界模型评测及基于图像的高效视频编辑。</p>
+<p><strong>跨领域趋势</strong>：追求框架统一与能力融合，强调推理深度与评估基准建设，跨模态学习成为连接各方向的纽带。</p>
+  </section>
+  
+
+  
+  <div class="category" id="cat-1">
+    <h2>图像生成 (1)</h2>
+    
+    <div class="paper">
+      <div class="paper-title">
+        <a href="https://huggingface.co/papers/2604.21904" target="_blank">UniGenDet: A Unified Generative-Discriminative Framework for Co-Evolutionary Image Generation and Generated Image Detection</a>
+        <span class="score">9.0</span>
+        
+        
+      </div>
+      <div class="tldr">This work proposes UniGenDet: a Unified generative-discriminative framework for co-evolutionary image Generation and generated image Detection, which combines a symbiotic multimodal self-attention mechanism and a unified fine-tuning algorithm to bridge the task gap.</div>
+      <div class="summary">该论文提出统一的生成-判别框架，通过共生机制协同进化图像生成和生成图像检测，实现状态-of-the-art性能。</div>
+      <div class="tags">
+        
+        <span class="tag">图像生成</span>
+        
+        <span class="tag">生成检测</span>
+        
+        <span class="tag">统一框架</span>
+        
+      </div>
+      <div class="authors">
+        
+          <div class="author-names">
+            Yanran Zhang <span class="h-index">h=2</span>, Wenzhao Zheng <span class="h-index">h=24</span>, Yifei Li <span class="h-index">h=1</span>, Bingyao Yu <span class="h-index">h=3</span>, Yu Zheng <span class="h-index">h=8</span>, Lei Chen, Jiwen Lu, Jie Zhou
+            <span class="h-badge">max h=24</span>
+          </div>
+          
+          
+            
+              
+            
+          
+            
+          
+            
+          
+            
+          
+            
+          
+            
+          
+            
+          
+            
+          
+          
+          <div class="author-affiliations">
+            <span class="affil-badge">Department of Automation, Tsinghua University, China</span>
+          </div>
+          
+        
+      </div>
+    </div>
+    
+  </div>
+  
+  <div class="category" id="cat-2">
+    <h2>多模态大模型 (3)</h2>
+    
+    <div class="paper">
+      <div class="paper-title">
+        <a href="https://huggingface.co/papers/2604.21921" target="_blank">Context Unrolling in Omni Models</a>
+        <span class="score">9.0</span>
+        
+        
+      </div>
+      <div class="tldr">Omni, a unified multimodal model natively trained on diverse modalities, is presented, where it is found that such training enables Context Unrolling, where the model explicitly reasons across multiple modal representations before producing predictions.</div>
+      <div class="summary">该论文提出统一多模态模型Omni，通过上下文展开在文本、图像、视频等模态上进行推理和生成，提升多模态任务性能。</div>
+      <div class="tags">
+        
+        <span class="tag">多模态大模型</span>
+        
+        <span class="tag">多模态推理</span>
+        
+        <span class="tag">生成</span>
+        
+      </div>
+      <div class="authors">
+        
+          <div class="author-names">
+            Ceyuan Yang <span class="h-index">h=35</span>, Zhijie Lin <span class="h-index">h=11</span>, Yang Zhao <span class="h-index">h=7</span>, Fei Xiao <span class="h-index">h=4</span>, Hao He <span class="h-index">h=8</span>, Qi Zhao <span class="h-index">h=65</span>, Chaorui Deng <span class="h-index">h=10</span>, Kunchang Li <span class="h-index">h=23</span>, Zihan Ding <span class="h-index">h=21</span>, Yuwei Guo <span class="h-index">h=29</span>, Fuyun Wang <span class="h-index">h=23</span>, Fangqi Zhu <span class="h-index">h=8</span>, Xiaonan Nie <span class="h-index">h=10</span>, Shenhan Zhu <span class="h-index">h=4</span>, Shanchuan Lin <span class="h-index">h=8</span>, Hongsheng Li <span class="h-index">h=99</span>, Weilin Huang <span class="h-index">h=53</span>, Guang Shi <span class="h-index">h=42</span>, Haoqi Fan <span class="h-index">h=29</span>
+            <span class="h-badge">max h=99</span>
+          </div>
+          
+          
+            
+              
+            
+          
+            
+              
+            
+          
+            
+              
+            
+          
+            
+              
+            
+          
+            
+              
+            
+          
+            
+              
+            
+          
+            
+          
+            
+              
+            
+          
+            
+              
+            
+          
+            
+              
+            
+          
+            
+              
+            
+          
+            
+              
+            
+          
+            
+              
+            
+          
+            
+          
+            
+          
+            
+              
+            
+          
+            
+              
+            
+          
+            
+              
+            
+          
+            
+              
+            
+          
+          
+          <div class="author-affiliations">
+            <span class="affil-badge">Chinese University of Hong Kong</span><span class="affil-badge">Zhejiang University of Science and Technology</span><span class="affil-badge">North University of China</span><span class="affil-badge">Sun Yat-sen University</span><span class="affil-badge">Anhui Jianzhu University</span><span class="affil-badge">Dalian Medical University</span><span class="affil-badge">Beijing Wuzi University</span><span class="affil-badge">Academy of Medical Sciences</span><span class="affil-badge">Yangzhou University</span><span class="affil-badge">Jiangsu University</span><span class="affil-badge">Foundation for Advanced Education in the Sciences</span><span class="affil-badge">Peking University</span><span class="affil-badge">Xuzhou University of Technology</span><span class="affil-badge">Rutgers, The State University of New Jersey</span><span class="affil-badge">North China Institute of Science and Technology</span><span class="affil-badge">Beijing University of Technology</span>
+          </div>
+          
+        
+      </div>
+    </div>
+    
+    <div class="paper">
+      <div class="paper-title">
+        <a href="https://huggingface.co/papers/2604.21668" target="_blank">Encoder-Free Human Motion Understanding via Structured Motion Descriptions</a>
+        <span class="score">8.0</span>
+        
+        
+      </div>
+      <div class="tldr">Structured Motion Description (SMD) is proposed, a rule-based, deterministic approach that converts joint position sequences into structured natural language descriptions of joint angles, body part movements, and global trajectory and enables LLMs to apply their pretrained knowledge of body parts, spatial directions, and movement semantics directly to motion reasoning, without requiring learned encoders or alignment modules.</div>
+      <div class="summary">该论文提出一种将人体运动转换为结构化自然语言描述的方法，使大型语言模型无需编码器即可进行运动推理，显著提升运动问答和字幕性能。</div>
+      <div class="tags">
+        
+        <span class="tag">多模态大模型</span>
+        
+        <span class="tag">运动理解</span>
+        
+        <span class="tag">语言模型</span>
+        
+      </div>
+      <div class="authors">
+        
+          <div class="author-names">
+            Yao Zhang, Zhuchenyang Liu <span class="h-index">h=2</span>, Thomas Ploetz <span class="h-index">h=1</span>, Yu Xiao <span class="h-index">h=2</span>
+            <span class="h-badge">max h=2</span>
+          </div>
+          
+          
+            
+              
+            
+          
+            
+          
+            
+              
+            
+          
+            
+          
+          
+          <div class="author-affiliations">
+            <span class="affil-badge">Aalto University, Espoo, Finland</span><span class="affil-badge">Georgia Institute of Technology, Atlanta, GA, USA</span>
+          </div>
+          
+        
+      </div>
+    </div>
+    
+    <div class="paper">
+      <div class="paper-title">
+        <a href="https://arxiv.org/abs/2604.20806" target="_blank">OMIBench: Benchmarking Olympiad-Level Multi-Image Reasoning in Large Vision-Language Model</a>
+        <span class="score">8.0</span>
+        
+        
+      </div>
+      <div class="tldr">OMIBench is presented, a benchmark designed to evaluate Olympiad-level reasoning when the required evidence is distributed over multiple images and contains problems from biology, chemistry, mathematics, and physics Olympiads, together with manually annotated rationales and evaluation protocols for both exact and semantic answer matching.</div>
+      <div class="summary">该论文引入OMIBench基准，评估大型视觉-语言模型在多图像推理上的表现，推动多模态大模型发展。</div>
+      <div class="tags">
+        
+        <span class="tag">多模态大模型</span>
+        
+        <span class="tag">基准</span>
+        
+        <span class="tag">多图像推理</span>
+        
+      </div>
+      <div class="authors">
+        
+          <div class="author-names">
+            Qiguang Chen <span class="h-index">h=21</span>, Chengyu Luan <span class="h-index">h=0</span>, Jiajun Wu <span class="h-index">h=6</span>, Qiming Yu <span class="h-index">h=2</span>, Yi Yang <span class="h-index">h=3</span>, Yizhuo Li, Jingqi Tong, Xiachong Feng, Libo Qin, Wanxiang Che
+            <span class="h-badge">max h=21</span>
+          </div>
+          
+          
+            
+              
+            
+          
+            
+          
+            
+          
+            
+          
+            
+          
+            
+          
+            
+          
+            
+          
+            
+          
+            
+          
+          
+          <div class="author-affiliations">
+            <span class="affil-badge">Wanxiang Che1,={}^{1,{\mbox{=}}}1Research Center for Social Computing and Interactive Robotics</span>
+          </div>
+          
+        
+      </div>
+    </div>
+    
+  </div>
+  
+  <div class="category" id="cat-3">
+    <h2>视频算法 (3)</h2>
+    
+    <div class="paper">
+      <div class="paper-title">
+        <a href="https://huggingface.co/papers/2604.21931" target="_blank">Seeing Fast and Slow: Learning the Flow of Time in Videos</a>
+        <span class="score">9.0</span>
+        
+        
+      </div>
+      <div class="tldr">This paper first exploits the multimodal cues and temporal structure naturally present in videos to learn, in a self-supervised manner, to detect speed changes and estimate playback speed, and develops models capable of temporal control, including speed-conditioned video generation, which produces motion at specified playback speed.</div>
+      <div class="summary">该论文研究视频中的时间流，开发模型实现速度检测、慢动作视频生成和时间超分辨率，推动时间可控视频学习。</div>
+      <div class="tags">
+        
+        <span class="tag">视频算法</span>
+        
+        <span class="tag">时间推理</span>
+        
+        <span class="tag">视频生成</span>
+        
+      </div>
+      <div class="authors">
+        
+          <div class="author-names">
+            Yen-Siang Wu <span class="h-index">h=2</span>, Rundong Luo <span class="h-index">h=4</span>, Jingsen Zhu, Tao Tu <span class="h-index">h=1</span>, Ali Farhadi <span class="h-index">h=1</span>, Matthew Wallingford, Yu-Chiang Frank Wang, Steve Marschner, Wei-Chiu Ma
+            <span class="h-badge">max h=4</span>
+          </div>
+          
+          
+            
+          
+            
+          
+            
+          
+            
+          
+            
+          
+            
+          
+            
+          
+            
+          
+            
+          
+          
+        
+      </div>
+    </div>
+    
+    <div class="paper">
+      <div class="paper-title">
+        <a href="https://huggingface.co/papers/2604.21686" target="_blank">WorldMark: A Unified Benchmark Suite for Interactive Video World Models</a>
+        <span class="score">8.0</span>
+        
+        
+      </div>
+      <div class="tldr">WorldMark is introduced, the first benchmark that provides a common playing field for interactive Image-to-Video world models and launches World Model Arena, an online platform where anyone can pit leading world models against each other in side-by-side battles and watch the live leaderboard.</div>
+      <div class="summary">该论文引入WorldMark基准套件，为交互式视频世界模型提供标准化测试条件，支持公平比较和评估。</div>
+      <div class="tags">
+        
+        <span class="tag">视频算法</span>
+        
+        <span class="tag">基准</span>
+        
+        <span class="tag">世界模型</span>
+        
+      </div>
+      <div class="authors">
+        
+          <div class="author-names">
+            Xiaojie Xu <span class="h-index">h=2</span>, Zhengyuan Lin <span class="h-index">h=2</span>, Kang He <span class="h-index">h=2</span>, Yukang Feng, Xiaofeng Mao <span class="h-index">h=4</span>, Yuanyang Yin, Kaipeng Zhang, Yongtao Ge
+            <span class="h-badge">max h=4</span>
+          </div>
+          
+          
+            
+          
+            
+          
+            
+          
+            
+          
+            
+          
+            
+          
+            
+          
+            
+          
+          
+        
+      </div>
+    </div>
+    
+    <div class="paper">
+      <div class="paper-title">
+        <a href="https://arxiv.org/abs/2604.07958" target="_blank">ImVideoEdit: Image-learning Video Editing via 2D Spatial Difference Attention Blocks</a>
+        <span class="score">8.0</span>
+        
+        
+      </div>
+      <div class="tldr">ImVideoEdit is an efficient framework that learns video editing capabilities entirely from image pairs by freezing the pre-trained 3D attention modules and treating images as single-frame videos, which decouple the 2D spatial learning process to help preserve the original temporal dynamics.</div>
+      <div class="summary">该论文提出ImVideoEdit框架，从图像对学习视频编辑，通过空间差异注意力模块保持时间动态，高效实现视频编辑。</div>
+      <div class="tags">
+        
+        <span class="tag">视频算法</span>
+        
+        <span class="tag">视频编辑</span>
+        
+        <span class="tag">图像学习</span>
+        
+      </div>
+      <div class="authors">
+        
+          <div class="author-names">
+            Jiayang Xu <span class="h-index">h=3</span>, Fan Zhuo <span class="h-index">h=1</span>, Majun Zhang <span class="h-index">h=2</span>, Changhao Pan <span class="h-index">h=7</span>, Zehan Wang <span class="h-index">h=19</span>, Siyu Chen, Xiaoda Yang, Tao Jin, Zhou Zhao
+            <span class="h-badge">max h=19</span>
+          </div>
+          
+          
+            
+              
+            
+          
+            
+          
+            
+          
+            
+          
+            
+          
+            
+          
+            
+          
+            
+          
+            
+          
+          
+          <div class="author-affiliations">
+            <span class="affil-badge">Zhejiang University</span>
+          </div>
+          
+        
+      </div>
+    </div>
+    
+  </div>
+  
+</main>
+</div>
+
+<script>
+(function() {
+  var sections = document.querySelectorAll('.category, .summary-section');
+  var links = document.querySelectorAll('.sidebar-nav a');
+  if (!sections.length || !links.length) return;
+
+  var observer = new IntersectionObserver(function(entries) {
+    entries.forEach(function(entry) {
+      if (entry.isIntersecting) {
+        links.forEach(function(l) { l.classList.remove('active'); });
+        var id = entry.target.id;
+        var active = document.querySelector('.sidebar-nav a[href="#' + id + '"]');
+        if (active) active.classList.add('active');
+      }
+    });
+  }, { rootMargin: '-20% 0px -60% 0px' });
+
+  sections.forEach(function(s) { observer.observe(s); });
+})();
+</script>
+</body>
+</html>
