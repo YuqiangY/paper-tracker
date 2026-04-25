@@ -134,15 +134,22 @@ def _build_prompt(papers: list[Paper], interests: list[dict]) -> str:
     for p in papers:
         lines = [f"ID: {p.id}", f"Title: {p.title}"]
         if p.authors_enriched:
-            author_strs = []
+            name_parts = []
             for a in p.authors_enriched[:5]:
-                parts = [a["name"]]
-                if a.get("affiliation"):
-                    parts.append(f'({a["affiliation"]})')
+                s = a["name"]
                 if a.get("h_index") is not None:
-                    parts.append(f'h-index:{a["h_index"]}')
-                author_strs.append(" ".join(parts))
-            lines.append(f"Authors: {'; '.join(author_strs)}")
+                    s += f" h-index:{a['h_index']}"
+                name_parts.append(s)
+            lines.append(f"Authors: {', '.join(name_parts)}")
+            affils = []
+            seen: set[str] = set()
+            for a in p.authors_enriched[:5]:
+                aff = a.get("affiliation")
+                if aff and aff not in seen:
+                    seen.add(aff)
+                    affils.append(aff)
+            if affils:
+                lines.append(f"Affiliations: {'; '.join(affils)}")
         elif p.authors:
             lines.append(f"Authors: {', '.join(p.authors[:5])}")
         lines.append(f"Abstract: {p.abstract}")

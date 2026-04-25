@@ -161,6 +161,9 @@ def stage_enrich(papers: list[Paper], config: dict, db: PaperDB) -> list[Paper]:
     enrichment_cfg = config.get("enrichment", {})
     if enrichment_cfg.get("enabled", False) and papers:
         s2_api_key = os.environ.get("SEMANTIC_SCHOLAR_API_KEY")
+        llm_api_key = os.environ.get("ANTHROPIC_API_KEY", "")
+        llm_base_url = os.environ.get("ANTHROPIC_BASE_URL") or None
+        llm_model = config.get("filter", {}).get("llm_model", "")
         log.info("Enriching %d filtered papers with author data", len(papers))
         try:
             enrich_authors(
@@ -168,6 +171,9 @@ def stage_enrich(papers: list[Paper], config: dict, db: PaperDB) -> list[Paper]:
                 api_key=s2_api_key,
                 timeout=enrichment_cfg.get("timeout", 10),
                 max_authors_per_paper=enrichment_cfg.get("max_authors_per_paper", 5),
+                llm_api_key=llm_api_key,
+                llm_base_url=llm_base_url,
+                llm_model=llm_model,
             )
             for p in papers:
                 if p.authors_enriched:
@@ -382,6 +388,40 @@ def cmd_output(config: dict):
     log.info("Output generation complete.")
 
 
+def cmd_bot_test(config: dict, target_date: str | None = None):
+    base_dir = os.path.dirname(os.path.abspath(__file__))
+    today = target_date or date.today().isoformat()
+    data_dir = os.path.join(base_dir, "data", "daily")
+    json_path = os.path.join(data_dir, f"{today}.json")
+
+    if not os.path.exists(json_path):
+        log.error("No data found at %s. Run the pipeline first.", json_path)
+        return
+
+    with open(json_path) as f:
+        papers = papers_from_json(f.read())
+
+    bot_cfg = config.get("output", {}).get("feishu_bot", {})
+    test_env = bot_cfg.get("test_webhook_url_env", "")
+    webhook_url = os.environ.get(test_env, "")
+    if not webhook_url:
+        log.error("Test webhook not configured (env: %s)", test_env)
+        return
+
+    summary_text = f"[测试] 今日共追踪到 {len(papers)} 篇相关论文。"
+    pages_base = bot_cfg.get("pages_base_url", "")
+    pages_url = f"{pages_base}/{today}.html" if pages_base else ""
+
+    ok = send_daily_bot_message(
+        webhook_url=webhook_url,
+        summary_text=summary_text,
+        date=today,
+        paper_count=len(papers),
+        pages_url=pages_url,
+    )
+    log.info("Test bot message %s", "sent successfully" if ok else "failed")
+
+
 def main():
     load_dotenv(override=True)
     base_dir = os.path.dirname(os.path.abspath(__file__))
@@ -394,6 +434,8 @@ def main():
     subparsers.add_parser("filter", help="Run keyword + LLM filtering on today's raw data")
     subparsers.add_parser("output", help="Generate HTML and Feishu output from today's data")
     subparsers.add_parser("run-all", help="Run full pipeline (default)")
+    bot_test_parser = subparsers.add_parser("bot-test", help="Send bot notification to test webhook")
+    bot_test_parser.add_argument("--date", default=None, help="Date to send (default: today)")
 
     args = parser.parse_args()
     config = load_config(args.config)
@@ -405,6 +447,8 @@ def main():
         cmd_filter(config)
     elif command == "output":
         cmd_output(config)
+    elif command == "bot-test":
+        cmd_bot_test(config, getattr(args, "date", None))
     else:
         run_pipeline(config)
 

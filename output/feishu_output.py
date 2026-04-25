@@ -17,38 +17,44 @@ def _parse_json_field(value):
     return value
 
 
-def _format_author(paper: dict, rich: bool = False) -> str:
+def _format_author(paper: dict, rich: bool = False) -> tuple[str, str]:
+    """Return (author_names_line, affiliations_line)."""
     enriched = _parse_json_field(paper.get("authors_enriched"))
     if enriched:
-        parts = []
+        name_parts = []
         for a in enriched[:3]:
             name = a.get("name", "")
-            aff = a.get("affiliation")
             h = a.get("h_index")
             if rich:
                 s = f"**{name}**"
-                if aff:
-                    s += f" *({aff})*"
                 if h:
                     s += f" `h={h}`"
             else:
                 s = name
-                if aff:
-                    s += f" ({aff})"
                 if h:
                     s += f" h={h}"
-            parts.append(s)
+            name_parts.append(s)
         total = len(enriched)
         if total > 3:
-            parts.append(f"等共 {total} 人")
-        return ", ".join(parts)
+            name_parts.append(f"等共 {total} 人")
+        names_str = ", ".join(name_parts)
+
+        seen: set[str] = set()
+        affils: list[str] = []
+        for a in enriched:
+            aff = a.get("affiliation")
+            if aff and aff not in seen:
+                seen.add(aff)
+                affils.append(aff)
+        affils_str = " · ".join(affils) if affils else ""
+        return names_str, affils_str
 
     authors = _parse_json_field(paper.get("authors"))
     if authors and isinstance(authors, list):
         if len(authors) <= 2:
-            return ", ".join(authors)
-        return f"{authors[0]}, {authors[1]} 等"
-    return ""
+            return ", ".join(authors), ""
+        return f"{authors[0]}, {authors[1]} 等", ""
+    return "", ""
 
 
 def _format_tags(paper: dict, rich: bool = False) -> str:
@@ -104,7 +110,7 @@ def _build_markdown(papers: list[dict], date: str) -> str:
     for i, p in enumerate(top3):
         title = p.get("title", "Untitled")
         score = p.get("relevance_score", "?")
-        author_str = _format_author(p, rich=True)
+        author_names, author_affils = _format_author(p, rich=True)
         summary = p.get("summary_zh", "")
         why = p.get("why_relevant", "")
         url = p.get("url", "")
@@ -117,9 +123,11 @@ def _build_markdown(papers: list[dict], date: str) -> str:
             f"### {i + 1}. [{title}]({url}) — 评分 {score}" if url else f"### {i + 1}. {title} — 评分 {score}",
             "",
         ])
-        lines.append(f"**作者**: {author_str}")
+        lines.append(f"**作者**: {author_names}")
         if max_h:
             lines[-1] += f"  |  max h-index: **{max_h}**"
+        if author_affils:
+            lines.append(f"**机构**: {author_affils}")
         lines.append("")
         venue = (p.get("venue") or "").strip()
         citations = p.get("citation_count")
@@ -161,7 +169,7 @@ def _build_markdown(papers: list[dict], date: str) -> str:
             url = p.get("url", "")
             score = p.get("relevance_score", "?")
             emoji = _score_emoji(score)
-            author_str = _format_author(p, rich=True)
+            author_names, author_affils = _format_author(p, rich=True)
             summary = p.get("summary_zh") or ""
             why = p.get("why_relevant", "")
             tags = _format_tags(p, rich=True)
@@ -176,10 +184,12 @@ def _build_markdown(papers: list[dict], date: str) -> str:
                 "",
                 f"**{title_md}** — 评分 **{score}**",
                 "",
-                f"**作者**: {author_str}",
+                f"**作者**: {author_names}",
             ])
             if max_h:
                 lines[-1] += f"  |  max h-index: **{max_h}**"
+            if author_affils:
+                lines.append(f"**机构**: {author_affils}")
             lines.append("")
             venue = (p.get("venue") or "").strip()
             citations = p.get("citation_count")

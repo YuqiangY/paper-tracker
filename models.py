@@ -53,11 +53,22 @@ class Paper:
         result = []
         for a in self.authors_enriched:
             parts = [a["name"]]
-            if a.get("affiliation"):
-                parts.append(f'({a["affiliation"]})')
             if a.get("h_index") is not None:
                 parts.append(f'[h={a["h_index"]}]')
             result.append(" ".join(parts))
+        return result
+
+    @property
+    def affiliations_unique(self) -> list[str]:
+        if not self.authors_enriched:
+            return []
+        seen: set[str] = set()
+        result: list[str] = []
+        for a in self.authors_enriched:
+            aff = a.get("affiliation")
+            if aff and aff not in seen:
+                seen.add(aff)
+                result.append(aff)
         return result
 
 

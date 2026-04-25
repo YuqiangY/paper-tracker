@@ -70,8 +70,8 @@ def test_build_markdown_card_layout():
     assert "callout>" in md
     assert "评分 **8.5**" in md
     assert "**Alice**" in md
-    assert "*(MIT)*" in md
     assert "`h=45`" in md
+    assert "**机构**: MIT" in md
 
 
 def test_build_markdown_multiple_categories():
@@ -132,9 +132,11 @@ def test_format_author_plain():
             {"name": "Bob", "affiliation": "Stanford", "h_index": 30, "semantic_scholar_id": None},
         ]),
     }
-    result = _format_author(paper)
-    assert "Alice (MIT) h=45" in result
-    assert "Bob (Stanford) h=30" in result
+    names, affils = _format_author(paper)
+    assert "Alice h=45" in names
+    assert "Bob h=30" in names
+    assert "MIT" in affils
+    assert "Stanford" in affils
 
 
 def test_format_author_rich():
@@ -144,17 +146,19 @@ def test_format_author_rich():
             {"name": "Bob", "affiliation": "Stanford", "h_index": 30, "semantic_scholar_id": None},
         ]),
     }
-    result = _format_author(paper, rich=True)
-    assert "**Alice**" in result
-    assert "*(MIT)*" in result
-    assert "`h=45`" in result
-    assert "**Bob**" in result
+    names, affils = _format_author(paper, rich=True)
+    assert "**Alice**" in names
+    assert "`h=45`" in names
+    assert "**Bob**" in names
+    assert "MIT" in affils
+    assert "Stanford" in affils
 
 
 def test_format_author_without_enriched():
     paper = {"authors": '["Alice", "Bob", "Charlie"]'}
-    result = _format_author(paper)
-    assert result == "Alice, Bob 等"
+    names, affils = _format_author(paper)
+    assert names == "Alice, Bob 等"
+    assert affils == ""
 
 
 def test_format_author_enriched_no_affiliation():
@@ -163,8 +167,9 @@ def test_format_author_enriched_no_affiliation():
             {"name": "Alice", "affiliation": None, "h_index": None, "semantic_scholar_id": None},
         ]),
     }
-    result = _format_author(paper)
-    assert result == "Alice"
+    names, affils = _format_author(paper)
+    assert names == "Alice"
+    assert affils == ""
 
 
 def test_format_author_shows_three():
@@ -176,11 +181,11 @@ def test_format_author_shows_three():
             {"name": "D", "affiliation": None, "h_index": None, "semantic_scholar_id": None},
         ]),
     }
-    result = _format_author(paper)
-    assert "A" in result
-    assert "B" in result
-    assert "C" in result
-    assert "等共 4 人" in result
+    names, affils = _format_author(paper)
+    assert "A" in names
+    assert "B" in names
+    assert "C" in names
+    assert "等共 4 人" in names
 
 
 def test_max_h_index():

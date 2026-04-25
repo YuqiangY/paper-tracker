@@ -99,7 +99,7 @@ def test_fetch_arxiv_html_affiliations_type1():
     with patch("fetcher.author_enrichment.urllib.request.urlopen") as mock_open:
         mock_resp = mock_open.return_value.__enter__.return_value
         mock_resp.read.return_value = html.encode("utf-8")
-        result = _fetch_arxiv_html_affiliations("2404.12345", timeout=10)
+        result, raw_text = _fetch_arxiv_html_affiliations("2404.12345", timeout=10)
     assert result == ["MIT", "Stanford University"]
 
 
