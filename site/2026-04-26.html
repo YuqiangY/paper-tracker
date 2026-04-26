@@ -1,0 +1,1127 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Paper Tracker - 2026-04-26</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+         color: #333; background: #fafafa; }
+
+  .layout { display: flex; max-width: 1200px; margin: 0 auto; }
+
+  /* Sidebar */
+  .sidebar { width: 220px; position: sticky; top: 0; height: 100vh; overflow-y: auto;
+             padding: 20px 16px; border-right: 1px solid #e0e0e0; background: #fff; flex-shrink: 0; }
+  .sidebar h3 { font-size: 0.85em; color: #666; text-transform: uppercase; letter-spacing: 0.5px;
+                margin-bottom: 12px; }
+  .sidebar-nav { list-style: none; }
+  .sidebar-nav li { margin-bottom: 4px; }
+  .sidebar-nav a { display: block; padding: 6px 10px; border-radius: 6px; color: #333;
+                   text-decoration: none; font-size: 0.9em; transition: background 0.15s; }
+  .sidebar-nav a:hover { background: #e8f0fe; }
+  .sidebar-nav a.active { background: #4a90d9; color: #fff; }
+  .sidebar-nav .nav-count { float: right; color: #999; font-size: 0.8em; }
+  .sidebar-nav a.active .nav-count { color: rgba(255,255,255,0.8); }
+  .sidebar-back { display: block; margin-bottom: 20px; color: #4a90d9; text-decoration: none;
+                  font-size: 0.9em; }
+  .sidebar-meta { font-size: 0.8em; color: #999; margin-top: 16px; padding-top: 12px;
+                  border-top: 1px solid #eee; }
+
+  /* Main content */
+  .main { flex: 1; min-width: 0; padding: 24px 32px; }
+
+  h1 { margin-bottom: 8px; font-size: 1.6em; }
+  .meta { color: #666; margin-bottom: 24px; }
+
+  /* Summary section */
+  .summary-section { background: #fff; border: 1px solid #e0e0e0; border-radius: 12px;
+                     padding: 20px 24px; margin-bottom: 28px;
+                     border-left: 4px solid #667eea; }
+  .summary-section h2 { font-size: 1em; color: #667eea; margin-bottom: 12px;
+                         font-weight: 600; letter-spacing: 0.5px; }
+  .summary-section p { margin: 0; line-height: 1.8; color: #444; font-size: 0.92em; }
+  .summary-section strong { color: #2c3e50; }
+
+  /* Category sections */
+  .category { margin-bottom: 32px; }
+  .category h2 { border-bottom: 2px solid #4a90d9; padding-bottom: 6px; margin-bottom: 16px;
+                 color: #2c3e50; font-size: 1.2em; }
+  .paper { background: #fff; border: 1px solid #e0e0e0; border-radius: 8px; padding: 16px;
+           margin-bottom: 12px; }
+  .paper-title { font-size: 1.05em; font-weight: 600; }
+  .paper-title a { color: #1a0dab; text-decoration: none; }
+  .paper-title a:hover { text-decoration: underline; }
+  .score { display: inline-block; background: #4a90d9; color: #fff; border-radius: 4px;
+           padding: 2px 8px; font-size: 0.85em; margin-left: 8px; }
+  .paper .summary { margin: 8px 0; color: #444; line-height: 1.6; }
+  .tags { margin-top: 6px; }
+  .tag { display: inline-block; background: #e8f0fe; color: #1967d2; border-radius: 3px;
+         padding: 2px 8px; font-size: 0.8em; margin-right: 4px; margin-bottom: 4px; }
+  .authors { font-size: 0.85em; color: #888; margin-top: 4px; }
+  .author-names { line-height: 1.6; }
+  .author-affiliations { margin-top: 3px; }
+  .affil-badge { display: inline-block; background: #e8eaf6; color: #283593; border-radius: 4px;
+                 padding: 3px 10px; font-size: 0.88em; margin-right: 6px; margin-bottom: 4px;
+                 font-weight: 500; letter-spacing: 0.2px; }
+  .h-index { display: inline-block; background: #e8f5e9; color: #2e7d32; border-radius: 3px;
+             padding: 1px 6px; font-size: 0.75em; margin-left: 2px; font-weight: 600; }
+  .h-badge { display: inline-block; background: #fff3e0; color: #e65100; border-radius: 4px;
+             padding: 2px 6px; font-size: 0.8em; margin-left: 8px; }
+  .venue { display: inline-block; background: #f3e5f5; color: #7b1fa2; border-radius: 3px;
+           padding: 2px 8px; font-size: 0.8em; margin-left: 8px; }
+  .citation-badge { display: inline-block; background: #e3f2fd; color: #1565c0; border-radius: 3px;
+                    padding: 2px 8px; font-size: 0.8em; margin-left: 4px; }
+  .tldr { font-size: 0.88em; color: #555; margin: 4px 0; font-style: italic; }
+
+  /* Responsive */
+  @media (max-width: 768px) {
+    .layout { flex-direction: column; }
+    .sidebar { width: 100%; height: auto; position: static; border-right: none;
+               border-bottom: 1px solid #e0e0e0; padding: 12px 16px; }
+    .sidebar-nav { display: flex; flex-wrap: wrap; gap: 4px; }
+    .sidebar-nav li { margin-bottom: 0; }
+    .main { padding: 16px; }
+  }
+</style>
+</head>
+<body>
+<div class="layout">
+
+<!-- Sidebar -->
+<aside class="sidebar">
+  <a href="index.html" class="sidebar-back">&larr; 返回索引</a>
+  <h3>分类导航</h3>
+  <ul class="sidebar-nav">
+    
+    <li><a href="#summary">今日热点</a></li>
+    
+    
+    <li><a href="#cat-1" data-cat="1">底层视觉 <span class="nav-count">1</span></a></li>
+    
+    <li><a href="#cat-2" data-cat="2">多模态大模型 <span class="nav-count">19</span></a></li>
+    
+    <li><a href="#cat-3" data-cat="3">视频算法 <span class="nav-count">2</span></a></li>
+    
+  </ul>
+  <div class="sidebar-meta">
+    2026-04-26<br>共 22 篇
+  </div>
+</aside>
+
+<!-- Main Content -->
+<main class="main">
+  <h1>Paper Tracker</h1>
+  <p class="meta">2026-04-26 &middot; 22 papers</p>
+
+  
+  <section class="summary-section" id="summary">
+    <h2>今日热点总结</h2>
+    <p><strong>底层视觉</strong>：扩散模型在盲图像恢复中通过空间失真引导提升性能，趋势为扩散模型与空间感知引导结合。</p>
+<p><strong>视频算法</strong>：自动化视频编辑框架整合语音、手势、CLIP/YOLO及大模型，趋势为多模态驱动的智能视频编辑与流程自动化。</p>
+<p><strong>多模态大模型</strong>：聚焦推理效率优化（缓存、量化、内存）、领域专业化适配（医疗、农业、工业）及评估基准构建，趋势为高效、专用、可评估的多模态大模型。</p>
+<p><strong>跨领域趋势</strong>：AI模型向垂直领域深度应用，同时注重效率优化与自动化流程集成。</p>
+  </section>
+  
+
+  
+  <div class="category" id="cat-1">
+    <h2>底层视觉 (1)</h2>
+    
+    <div class="paper">
+      <div class="paper-title">
+        <a href="https://www.semanticscholar.org/paper/981589ce3376de6b261f5dbe691dda8c20d81895" target="_blank">Spatial Distortion-Guided Diffusion Inversion for Blind Image Restoration</a>
+        <span class="score">9.0</span>
+        <span class="venue">National Conference on Communications</span>
+        
+      </div>
+      
+      <div class="summary">提出了一种基于扩散模型的盲图像恢复方法，通过空间失真图引导反演过程以提升性能。</div>
+      <div class="tags">
+        
+        <span class="tag">diffusion models</span>
+        
+        <span class="tag">image restoration</span>
+        
+        <span class="tag">blind restoration</span>
+        
+      </div>
+      <div class="authors">
+        
+          Ajinkya Hase, Parimala Kancharla
+        
+      </div>
+    </div>
+    
+  </div>
+  
+  <div class="category" id="cat-2">
+    <h2>多模态大模型 (19)</h2>
+    
+    <div class="paper">
+      <div class="paper-title">
+        <a href="https://arxiv.org/abs/2601.19325" target="_blank">Innovator-VL: A Multimodal Large Language Model for Scientific Discovery</a>
+        <span class="score">9.0</span>
+        <span class="venue">arXiv.org</span>
+        <span class="citation-badge">5 citations</span>
+      </div>
+      <div class="tldr">Innovator-VL, a scientific multimodal large language model designed to advance understanding and reasoning across diverse scientific domains while maintaining excellent performance on general vision tasks, demonstrates that principled training design and transparent methodology can yield strong scientific intelligence with substantially reduced data requirements.</div>
+      <div class="summary">一个用于科学发现的多模态大语言模型，强调高效训练和透明方法以提升科学推理。</div>
+      <div class="tags">
+        
+        <span class="tag">multimodal LLM</span>
+        
+        <span class="tag">scientific discovery</span>
+        
+        <span class="tag">efficiency</span>
+        
+      </div>
+      <div class="authors">
+        
+          <div class="author-names">
+            Zichen Wen <span class="h-index">h=13</span>, Boxue Yang <span class="h-index">h=3</span>, Shuang Chen <span class="h-index">h=4</span>, Yaojie Zhang <span class="h-index">h=4</span>, Yuhang Han <span class="h-index">h=4</span>, Junlong Ke, Cong Wang <span class="h-index">h=66</span>, Yicheng Fu <span class="h-index">h=15</span>, Jiawang Zhao <span class="h-index">h=7</span>, Jiangchao Yao <span class="h-index">h=23</span>, Xi Fang <span class="h-index">h=25</span>, Zhen Wang <span class="h-index">h=72</span>, H. Cai <span class="h-index">h=93</span>, Linli Yao <span class="h-index">h=22</span>, Zhifeng Gao <span class="h-index">h=36</span>, Yanhui Hong <span class="h-index">h=3</span>, Nang Yuan, Yixuan Li <span class="h-index">h=46</span>, Guojiang Zhao <span class="h-index">h=6</span>, Haoyi Tao <span class="h-index">h=1</span>, Nan Wang <span class="h-index">h=71</span>, Han Lyu <span class="h-index">h=6</span>, Guolin Ke <span class="h-index">h=24</span>, Ning Liao <span class="h-index">h=20</span>, Xiaoxing Wang <span class="h-index">h=56</span>, Kai Chen <span class="h-index">h=25</span>, Zhiyu Li <span class="h-index">h=49</span>, Feiyu Xiong <span class="h-index">h=13</span>, Sihan Hu <span class="h-index">h=15</span>, Kun Chen <span class="h-index">h=49</span>, Yanfeng Wang <span class="h-index">h=52</span>, E. Weinan, Linfeng Zhang <span class="h-index">h=50</span>
+            <span class="h-badge">max h=93</span>
+          </div>
+          
+          
+            
+              
+            
+          
+            
+              
+            
+          
+            
+              
+            
+          
+            
+              
+            
+          
+            
+              
+            
+          
+            
+          
+            
+              
+            
+          
+            
+              
+            
+          
+            
+              
+            
+          
+            
+              
+            
+          
+            
+              
+            
+          
+            
+              
+            
+          
+            
+              
+            
+          
+            
+              
+            
+          
+            
+              
+            
+          
+            
+              
+            
+          
+            
+          
+            
+              
+            
+          
+            
+          
+            
+          
+            
+          
+            
+              
+            
+          
+            
+          
+            
+              
+            
+          
+            
+              
+            
+          
+            
+          
+            
+              
+            
+          
+            
+              
+            
+          
+            
+          
+            
+              
+            
+          
+            
+              
+            
+          
+            
+          
+            
+              
+            
+          
+          
+          <div class="author-affiliations">
+            <span class="affil-badge">University of Electronic Science and Technology of China</span><span class="affil-badge">Liaoning Ocean and Fisheries Research Institute</span><span class="affil-badge">Shihezi University</span><span class="affil-badge">Mongolian University of Science and Technology</span><span class="affil-badge">Chongqing University</span><span class="affil-badge">New Jersey Institute of Technology</span><span class="affil-badge">China Institute of Water Resources and Hydropower Research</span><span class="affil-badge">Northwestern Polytechnical University</span><span class="affil-badge">Shanghai Jiao Tong University</span><span class="affil-badge">Wuhan University of Technology</span><span class="affil-badge">Shenyang Medical College</span><span class="affil-badge">Yale University</span><span class="affil-badge">Minzu University of China</span><span class="affil-badge">Xian Center for Disease Control and Prevention</span><span class="affil-badge">SP Technology (South Korea)</span><span class="affil-badge">Wuhan University</span><span class="affil-badge">Kyoto University</span><span class="affil-badge">Sun Yat-sen University</span><span class="affil-badge">Nanchang University</span><span class="affil-badge">Zhejiang Chinese Medical University</span><span class="affil-badge">Hongzhiwei Technology (China)</span><span class="affil-badge">Xidian University</span><span class="affil-badge">Jiangsu University</span><span class="affil-badge">China Institute of Sport Science</span>
+          </div>
+          
+        
+      </div>
+    </div>
+    
+    <div class="paper">
+      <div class="paper-title">
+        <a href="https://arxiv.org/abs/2602.01816" target="_blank">Seeing Is Believing? A Benchmark for Multimodal Large Language Models on Visual Illusions and Anomalies</a>
+        <span class="score">9.0</span>
+        <span class="venue">arXiv.org</span>
+        <span class="citation-badge">3 citations</span>
+      </div>
+      <div class="tldr">VIA-Bench is introduced, a challenging benchmark designed to probe model performance on visual illusions and anomalies, and reveals a fundamental divergence between machine and human perception, suggesting that resolving such perceptual bottlenecks is critical for the advancement of artificial general intelligence.</div>
+      <div class="summary">本文介绍了VIA-Bench，一个用于评估多模态大语言模型在视觉错觉和异常场景下的基准测试。</div>
+      <div class="tags">
+        
+        <span class="tag">multimodal LLM</span>
+        
+        <span class="tag">benchmark</span>
+        
+        <span class="tag">visual illusions</span>
+        
+      </div>
+      <div class="authors">
+        
+          <div class="author-names">
+            Wenjin Hou <span class="h-index">h=2</span>, Wei Liu <span class="h-index">h=5</span>, Han Hu <span class="h-index">h=3</span>, Xiaoxiao Sun <span class="h-index">h=2</span>, S. Yeung-Levy <span class="h-index">h=21</span>, Hehe Fan
+            <span class="h-badge">max h=21</span>
+          </div>
+          
+          
+            
+          
+            
+          
+            
+          
+            
+          
+            
+          
+            
+          
+          
+        
+      </div>
+    </div>
+    
+    <div class="paper">
+      <div class="paper-title">
+        <a href="https://arxiv.org/abs/2601.09385" target="_blank">SLAM-LLM: A Modular, Open-Source Multimodal Large Language Model Framework and Best Practice for Speech, Language, Audio and Music Processing</a>
+        <span class="score">8.0</span>
+        <span class="venue">IEEE Journal on Selected Topics in Signal Processing</span>
+        <span class="citation-badge">2 citations</span>
+      </div>
+      <div class="tldr">SLAM-LLM is an open-source deep learning framework designed to train customized MLLMs, focused on speech, language, audio, and music processing, and provides a modular configuration of different encoders, projectors, LLMs, and parameter-efficient fine-tuning plugins.</div>
+      <div class="summary">一个开源的多模态大语言模型框架，专注于语音、音频和音乐处理，提供模块化配置。</div>
+      <div class="tags">
+        
+        <span class="tag">multimodal LLM</span>
+        
+        <span class="tag">audio processing</span>
+        
+        <span class="tag">open-source</span>
+        
+      </div>
+      <div class="authors">
+        
+          <div class="author-names">
+            Ziyang Ma <span class="h-index">h=29</span>, Guanrou Yang <span class="h-index">h=7</span>, Wenxi Chen <span class="h-index">h=8</span>, Zhifu Gao <span class="h-index">h=18</span>, Yexing Du <span class="h-index">h=4</span>, Xiquan Li, Zhisheng Zheng, Haina Zhu, Jianheng Zhuo, Zheshu Song, Ruiyang Xu, Tiranrui Wang, Yifan Yang, Yanqiao Zhu, Zhikang Niu, Liumeng Xue, Yinghao Ma, Rui Yuan, Shiliang Zhang, Kai Yu, E. Chng, Xie Chen
+            <span class="h-badge">max h=29</span>
+          </div>
+          
+          
+            
+              
+            
+          
+            
+              
+            
+          
+            
+          
+            
+              
+            
+          
+            
+              
+            
+          
+            
+          
+            
+              
+            
+          
+            
+          
+            
+          
+            
+          
+            
+          
+            
+          
+            
+          
+            
+          
+            
+          
+            
+              
+            
+          
+            
+              
+            
+          
+            
+          
+            
+          
+            
+          
+            
+          
+            
+          
+          
+          <div class="author-affiliations">
+            <span class="affil-badge">Nanyang Technological University</span><span class="affil-badge">X-LANCE Lab</span><span class="affil-badge">Tongyi Lab</span><span class="affil-badge">Peng Cheng Laboratory</span><span class="affil-badge">University of Texas at Austin</span><span class="affil-badge">Hong Kong University of Science and Technology</span><span class="affil-badge">Queen Mary University of London</span>
+          </div>
+          
+        
+      </div>
+    </div>
+    
+    <div class="paper">
+      <div class="paper-title">
+        <a href="https://arxiv.org/abs/2602.01541" target="_blank">Toward Cognitive Supersensing in Multimodal Large Language Model</a>
+        <span class="score">8.0</span>
+        <span class="venue">arXiv.org</span>
+        <span class="citation-badge">1 citations</span>
+      </div>
+      <div class="tldr">Cognitive Supersensing is introduced, a novel training paradigm that endows MLLMs with human-like visual imagery capabilities by integrating a Latent Visual Imagery Prediction head that jointly learns sequences of visual cognitive latent embeddings and aligns them with the answer, thereby forming vision-based internal reasoning chains.</div>
+      <div class="summary">提出认知超感知训练范式，增强多模态大语言模型的视觉推理能力以解决复杂问题。</div>
+      <div class="tags">
+        
+        <span class="tag">multimodal LLM</span>
+        
+        <span class="tag">visual reasoning</span>
+        
+        <span class="tag">cognitive</span>
+        
+      </div>
+      <div class="authors">
+        
+          <div class="author-names">
+            Boyi Li <span class="h-index">h=2</span>, Yifan Shen <span class="h-index">h=4</span>, Yuanzhe Liu <span class="h-index">h=3</span>, Yifan Xu <span class="h-index">h=2</span>, Jiateng Liu <span class="h-index">h=4</span>, Xinzhuo Li, Zhengyuan Li, Jingyuan Zhu, Yu Zhong, Fangzhou Lan, Jianguo Cao, J. Rehg, Heng Ji, Ismini Lourentzou, Xu Cao
+            <span class="h-badge">max h=4</span>
+          </div>
+          
+          
+            
+              
+            
+          
+            
+          
+            
+          
+            
+          
+            
+          
+            
+          
+            
+          
+            
+          
+            
+          
+            
+          
+            
+          
+            
+          
+            
+          
+            
+          
+            
+          
+          
+          <div class="author-affiliations">
+            <span class="affil-badge">UIUC</span>
+          </div>
+          
+        
+      </div>
+    </div>
+    
+    <div class="paper">
+      <div class="paper-title">
+        <a href="https://arxiv.org/abs/2603.26498" target="_blank">Rocks, Pebbles and Sand: Modality-aware Scheduling for Multimodal Large Language Model Inference</a>
+        <span class="score">8.0</span>
+        
+        
+      </div>
+      <div class="tldr">RPS-Serve is designed, a modality-aware scheduler that lets sand flow quickly through pebbles and rocks, ensuring interactive responsiveness while avoiding starvation, and delivers LLM-like responsiveness for MLLMs, with modality-aware scheduling and by making the most efficient use of the available resources.</div>
+      <div class="summary">提出模态感知调度方法，优化多模态大语言模型的推理性能，减少延迟和资源争用。</div>
+      <div class="tags">
+        
+        <span class="tag">multimodal LLM</span>
+        
+        <span class="tag">inference optimization</span>
+        
+        <span class="tag">scheduling</span>
+        
+      </div>
+      <div class="authors">
+        
+          <div class="author-names">
+            Konstantinos Papaioannou <span class="h-index">h=3</span>, Thaleia Dimitra Doudali <span class="h-index">h=9</span>
+            <span class="h-badge">max h=9</span>
+          </div>
+          
+          
+            
+              
+            
+          
+            
+          
+          
+          <div class="author-affiliations">
+            <span class="affil-badge">IMDEA Software Institute</span>
+          </div>
+          
+        
+      </div>
+    </div>
+    
+    <div class="paper">
+      <div class="paper-title">
+        <a href="https://www.semanticscholar.org/paper/e19009f1150a59931c5bf7b10f2a2eb342e2742a" target="_blank">StreetViewGPT: A Street View Image Scene Perception and Reasoning Method Based on Multimodal Large Language Model</a>
+        <span class="score">8.0</span>
+        <span class="venue">IEEE Journal of Selected Topics in Applied Earth Observations and Remote Sensing</span>
+        
+      </div>
+      
+      <div class="summary">基于多模态大语言模型的街景图像场景感知与推理方法，增强空间理解能力。</div>
+      <div class="tags">
+        
+        <span class="tag">multimodal LLM</span>
+        
+        <span class="tag">street view</span>
+        
+        <span class="tag">spatial reasoning</span>
+        
+      </div>
+      <div class="authors">
+        
+          Zhuoheng Song, Bingchuan Jiang, Xiao Wang, Yong Sun, Ru Yu, Tingting Li
+        
+      </div>
+    </div>
+    
+    <div class="paper">
+      <div class="paper-title">
+        <a href="https://arxiv.org/abs/2603.16934" target="_blank">AgriChat: A Multimodal Large Language Model for Agriculture Image Understanding</a>
+        <span class="score">8.0</span>
+        
+        
+      </div>
+      <div class="tldr">The Vision-to-Verified-Knowledge (V2VK) pipeline is proposed, a novel generative AI-driven annotation framework that integrates visual captioning with web-augmented scientific retrieval to autonomously generate the AgriMM benchmark, effectively eliminating biological hallucinations by grounding training data in verified phytopathological literature.</div>
+      <div class="summary">提出农业图像理解的多模态大语言模型，并构建大规模数据集以支持精准农业。</div>
+      <div class="tags">
+        
+        <span class="tag">multimodal LLM</span>
+        
+        <span class="tag">agriculture</span>
+        
+        <span class="tag">dataset</span>
+        
+      </div>
+      <div class="authors">
+        
+          <div class="author-names">
+            Abderrahmene Boudiaf <span class="h-index">h=4</span>, Irfan Hussain <span class="h-index">h=1</span>, Sajid Javed <span class="h-index">h=10</span>
+            <span class="h-badge">max h=10</span>
+          </div>
+          
+          
+            
+              
+            
+          
+            
+          
+            
+          
+          
+          <div class="author-affiliations">
+            <span class="affil-badge">Sajid JavedDepartment of Computer Science, Khalifa University of Science and Technology,
+Abu Dhabi, United Arab Emirates</span>
+          </div>
+          
+        
+      </div>
+    </div>
+    
+    <div class="paper">
+      <div class="paper-title">
+        <a href="https://arxiv.org/abs/2602.01901" target="_blank">Q Cache: Visual Attention is Valuable in Less than Half of Decode Layers for Multimodal Large Language Model</a>
+        <span class="score">8.0</span>
+        <span class="venue">AAAI Conference on Artificial Intelligence</span>
+        
+      </div>
+      <div class="tldr">In Lazy Attention, a novel layer-shared cache is developed, Q Cache, tailored for MLLMs, which facilitates the reuse of queries across adjacent layers and is highly flexible as it is orthogonal to existing token-wise techniques and can be deployed independently or combined with token pruning approaches.</div>
+      <div class="summary">提出层共享缓存机制，优化多模态大语言模型的注意力计算，提升推理效率。</div>
+      <div class="tags">
+        
+        <span class="tag">multimodal LLM</span>
+        
+        <span class="tag">efficiency</span>
+        
+        <span class="tag">attention</span>
+        
+      </div>
+      <div class="authors">
+        
+          <div class="author-names">
+            Jiedong Zhuang <span class="h-index">h=3</span>, Lu Lu <span class="h-index">h=2</span>, Ming Dai <span class="h-index">h=3</span>, Rui Hu <span class="h-index">h=2</span>, Jian Chen <span class="h-index">h=5</span>, Qiang Liu, Haoji Hu
+            <span class="h-badge">max h=5</span>
+          </div>
+          
+          
+            
+          
+            
+          
+            
+          
+            
+          
+            
+          
+            
+          
+            
+          
+          
+        
+      </div>
+    </div>
+    
+    <div class="paper">
+      <div class="paper-title">
+        <a href="https://www.semanticscholar.org/paper/9b640a5adbeec5b5ffa268d743297c0e5e56ff62" target="_blank">Efficient Multimodal Large Language Model via Dynamic KV Cache Quantization</a>
+        <span class="score">8.0</span>
+        <span class="venue">AAAI Conference on Artificial Intelligence</span>
+        
+      </div>
+      <div class="tldr">This paper proposes Dynamic KV Cache Quantization, a novel quantization strategy tailored for multimodal LMMs that significantly outperforms existing KV-cache quantization approaches, achieving a superior trade-off between memory efficiency and model accuracy.</div>
+      <div class="summary">提出动态键值缓存量化方法，提升多模态大语言模型的推理效率并降低内存使用。</div>
+      <div class="tags">
+        
+        <span class="tag">multimodal LLM</span>
+        
+        <span class="tag">quantization</span>
+        
+        <span class="tag">efficiency</span>
+        
+      </div>
+      <div class="authors">
+        
+          Jiahao Fan, Chien-Ming Chen
+        
+      </div>
+    </div>
+    
+    <div class="paper">
+      <div class="paper-title">
+        <a href="https://arxiv.org/abs/2604.16734" target="_blank">Reducing Peak Memory Usage for Modern Multimodal Large Language Model Pipelines</a>
+        <span class="score">8.0</span>
+        
+        
+      </div>
+      <div class="tldr">This work shows that MLLMs exhibit inherent structural regularities and representational redundancy that can be exploited to control memory growth throughout inference, and proposes a sequential input-compression mechanism that enforces a fixed memory budget by performing structure-aware key-value cache compression during the prefill process.</div>
+      <div class="summary">提出顺序输入压缩机制，降低多模态大语言模型推理的峰值内存使用，保持性能。</div>
+      <div class="tags">
+        
+        <span class="tag">multimodal LLM</span>
+        
+        <span class="tag">memory optimization</span>
+        
+        <span class="tag">inference</span>
+        
+      </div>
+      <div class="authors">
+        
+          <div class="author-names">
+            Junwan Kim <span class="h-index">h=3</span>, Hyunkyung Bae <span class="h-index">h=5</span>
+            <span class="h-badge">max h=5</span>
+          </div>
+          
+          
+            
+              
+            
+          
+            
+          
+          
+          <div class="author-affiliations">
+            <span class="affil-badge">Hyunkyung Bae*New York University{junwan.kim, hyunkyung.bae}@nyu.edu</span>
+          </div>
+          
+        
+      </div>
+    </div>
+    
+    <div class="paper">
+      <div class="paper-title">
+        <a href="https://www.semanticscholar.org/paper/78fade73647bfdbaf1f8fe4f65062f10a2c23152" target="_blank">GMAI-VL & GMAI-VL-5.5M: A Large Vision-Language Model and a Comprehensive Multimodal Dataset Towards General Medical AI</a>
+        <span class="score">8.0</span>
+        <span class="venue">AAAI Conference on Artificial Intelligence</span>
+        
+      </div>
+      <div class="tldr">GMAI-VL is developed, a 7B-parameter general medical vision-language model, with a three-stage training strategy that enhances the integration of visual and textual information, which significantly improves the model's ability to process multimodal data, supporting accurate diagnoses and clinical decision-making.</div>
+      <div class="summary">提出通用医学视觉语言模型和大规模多模态数据集，推动通用医学人工智能发展。</div>
+      <div class="tags">
+        
+        <span class="tag">multimodal LLM</span>
+        
+        <span class="tag">medical AI</span>
+        
+        <span class="tag">dataset</span>
+        
+      </div>
+      <div class="authors">
+        
+          Tian-Xin Li, Yan-Cheng Su, Wei Li, Bin Fu, Zhe Chen, Ziyan Huang, Guoan Wang, Chenglong Ma, Ying Chen, Ming Hu, Yanjun Li, Pengcheng Chen, Shixiang Tang, Xiaowei Hu, Zhongying Deng, Yuanfeng Ji, Jin Ye, Yu Qiao, Junjun He
+        
+      </div>
+    </div>
+    
+    <div class="paper">
+      <div class="paper-title">
+        <a href="https://arxiv.org/abs/2603.13978" target="_blank">When Visual Privacy Protection Meets Multimodal Large Language Models</a>
+        <span class="score">8.0</span>
+        <span class="venue">International Journal of Computer Vision</span>
+        <span class="citation-badge">1 citations</span>
+      </div>
+      <div class="tldr">A novel framework is proposed, in which the learning objective is carefully designed with Pareto optimality to seek a better trade-off between visual privacy and MLLM’s performance, and critical-history enhanced optimization is proposed to effectively optimize the framework with the black-box MLLM.</div>
+      <div class="summary">本文提出了一种在使用多模态大语言模型云服务时保护视觉隐私的新框架。</div>
+      <div class="tags">
+        
+        <span class="tag">MLLM privacy</span>
+        
+        <span class="tag">visual privacy</span>
+        
+        <span class="tag">black-box models</span>
+        
+      </div>
+      <div class="authors">
+        
+          <div class="author-names">
+            Xiaofei Hui <span class="h-index">h=3</span>, Qian Wu <span class="h-index">h=9</span>, Haoxuan Qu <span class="h-index">h=9</span>, Majid Mirmehdi <span class="h-index">h=2</span>, Hossein Rahmani <span class="h-index">h=8</span>, Jun Liu
+            <span class="h-badge">max h=9</span>
+          </div>
+          
+          
+            
+          
+            
+          
+            
+          
+            
+          
+            
+          
+            
+          
+          
+        
+      </div>
+    </div>
+    
+    <div class="paper">
+      <div class="paper-title">
+        <a href="https://arxiv.org/abs/2601.14052" target="_blank">Vision Also You Need: Navigating Out-of-Distribution Detection with Multimodal Large Language Model</a>
+        <span class="score">7.0</span>
+        <span class="venue">arXiv.org</span>
+        <span class="citation-badge">1 citations</span>
+      </div>
+      <div class="tldr">A novel pipeline, MM-OOD, which leverages the multimodal reasoning capabilities of MLLMs and their ability to conduct multi-round conversations for enhanced outlier detection is proposed, designed to improve performance in both near OOD and far OOD tasks.</div>
+      <div class="summary">利用多模态大语言模型进行分布外检测，通过多轮对话和草图生成框架提升性能。</div>
+      <div class="tags">
+        
+        <span class="tag">OOD detection</span>
+        
+        <span class="tag">multimodal LLM</span>
+        
+        <span class="tag">vision</span>
+        
+      </div>
+      <div class="authors">
+        
+          <div class="author-names">
+            Haoran Xu <span class="h-index">h=1</span>, Yanlin Liu <span class="h-index">h=1</span>, Zizhao Tong <span class="h-index">h=1</span>, Jiaze Li <span class="h-index">h=5</span>, Kexue Fu <span class="h-index">h=3</span>, Yuyang Zhang <span class="h-index">h=44</span>, Longxiang Gao, Shuaiguang Li, Xingyu Li, Yanran Xu, Changwei Wang
+            <span class="h-badge">max h=44</span>
+          </div>
+          
+          
+            
+              
+            
+          
+            
+              
+            
+          
+            
+          
+            
+              
+            
+          
+            
+              
+            
+          
+            
+              
+            
+          
+            
+          
+            
+          
+            
+              
+            
+          
+            
+              
+            
+          
+            
+          
+          
+          <div class="author-affiliations">
+            <span class="affil-badge">Sun Yat-sen University</span><span class="affil-badge">Zhejiang Chinese Medical University</span><span class="affil-badge">Zhejiang University</span><span class="affil-badge">Key Laboratory of Computing Power Network and Information Security</span><span class="affil-badge">Hefei University</span><span class="affil-badge">Mohamed bin Zayed University of Artificial Intelligence</span><span class="affil-badge">RWTH Aachen University</span>
+          </div>
+          
+        
+      </div>
+    </div>
+    
+    <div class="paper">
+      <div class="paper-title">
+        <a href="https://www.semanticscholar.org/paper/ef5f923f3fc5ac1cda655167d01170187db5a865" target="_blank">Developing and evaluating multimodal large language model for orthopantomography analysis to support clinical dentistry</a>
+        <span class="score">7.0</span>
+        <span class="venue">Cell Reports Medicine</span>
+        
+      </div>
+      <div class="tldr">ToothXpert facilitates simultaneous visual and language responses, fostering dynamic dentistry support, and achieves higher F1 scores than two junior dentists with 3-years’ clinical experience, while requiring significantly less time.</div>
+      <div class="summary">开发一个用于口腔全景图分析的多模态大语言模型系统，支持交互式牙科诊断。</div>
+      <div class="tags">
+        
+        <span class="tag">multimodal LLM</span>
+        
+        <span class="tag">medical imaging</span>
+        
+        <span class="tag">dentistry</span>
+        
+      </div>
+      <div class="authors">
+        
+          Xinyu Liu, Kuo Feng Hung, Weihao Yu, Raymond Ng, Wuyang Li, Tianye Niu, Hui Chen, Yixuan Yuan
+        
+      </div>
+    </div>
+    
+    <div class="paper">
+      <div class="paper-title">
+        <a href="https://www.semanticscholar.org/paper/d851078b10bf327fa5bf4e2fe395da048fa68ecf" target="_blank">Prediction of refractive error in adolescents using a multimodal large language model</a>
+        <span class="score">7.0</span>
+        <span class="venue">Frontiers in Medicine</span>
+        
+      </div>
+      <div class="tldr">This multimodal LLM demonstrates the potential of digital health technologies to enhance refractive error prediction in adolescents and its integration into digital health platforms can provide a non-invasive, scalable solution for early myopia screening.</div>
+      <div class="summary">利用多模态大语言模型从眼底图像和临床数据预测青少年屈光误差，作为数字健康工具。</div>
+      <div class="tags">
+        
+        <span class="tag">multimodal LLM</span>
+        
+        <span class="tag">healthcare</span>
+        
+        <span class="tag">prediction</span>
+        
+      </div>
+      <div class="authors">
+        
+          Chaojun Chen, Yaqi Wang, Xia Zhang, Jiahong Han, Pinghui Hu, Jianjun Liu, Leilei Cao
+        
+      </div>
+    </div>
+    
+    <div class="paper">
+      <div class="paper-title">
+        <a href="https://www.semanticscholar.org/paper/ae9c34cddb1530069db50f95c9f49d9615e614c2" target="_blank">DRPVLM: A generative multimodal large language model for real-time driving risk prediction.</a>
+        <span class="score">7.0</span>
+        <span class="venue">Accident Analysis and Prevention</span>
+        
+      </div>
+      <div class="tldr">Results indicate that Multimodal LLMs significantly enhance driving-risk prediction, with fine-tuned Qwen2.5-VL-32B achieving an accuracy of 0.92 and an F1 score of 0.91 across observation windows, highlighting the strong potential of LLMs for real-time driving risk prediction.</div>
+      <div class="summary">提出用于实时驾驶风险预测的生成式多模态大语言模型，提升交通安全。</div>
+      <div class="tags">
+        
+        <span class="tag">multimodal LLM</span>
+        
+        <span class="tag">driving</span>
+        
+        <span class="tag">risk prediction</span>
+        
+      </div>
+      <div class="authors">
+        
+          Junhua Wang, Wenhao Zhang, Ting Fu, Qiangqiang Shangguan
+        
+      </div>
+    </div>
+    
+    <div class="paper">
+      <div class="paper-title">
+        <a href="https://www.semanticscholar.org/paper/b1c1925b8127b96a527977dcfcd18127ac4a8466" target="_blank">Forecasting Alzheimer's Disease Progression with Deep Multimodal Learning: Integration of 3D MRI and Tabular Clinical Records via a Large Vision-Language Model</a>
+        <span class="score">7.0</span>
+        <span class="venue">medRxiv</span>
+        <span class="citation-badge">1 citations</span>
+      </div>
+      <div class="tldr">This study introduces the first application of video-based Large Vision-Language Models (LVLMs) to interpret 3D volumetric MRI as a temporal sequence, capturing longitudinal neurodegeneration more effectively than static 3D-CNNs.</div>
+      <div class="summary">利用大型视觉语言模型整合3D MRI和临床记录，预测阿尔茨海默病进展。</div>
+      <div class="tags">
+        
+        <span class="tag">multimodal LLM</span>
+        
+        <span class="tag">medical imaging</span>
+        
+        <span class="tag">prognosis</span>
+        
+      </div>
+      <div class="authors">
+        
+          P. Dang, F. Yu, T. Guo, J. Yan, C. Zhang, S. Cao, S. Hashemifar
+        
+      </div>
+    </div>
+    
+    <div class="paper">
+      <div class="paper-title">
+        <a href="https://www.semanticscholar.org/paper/8568e99530ccde66cbba382e5bf6fad1b40a2aa9" target="_blank">CNC-VLM: An RLHF-optimized industrial large vision-language model with multimodal learning for imbalanced CNC fault detection</a>
+        <span class="score">7.0</span>
+        <span class="venue">Mechanical systems and signal processing</span>
+        <span class="citation-badge">8 citations</span>
+      </div>
+      
+      <div class="summary">提出用于不平衡CNC故障检测的RLHF优化大型视觉语言模型，提升工业诊断。</div>
+      <div class="tags">
+        
+        <span class="tag">multimodal LLM</span>
+        
+        <span class="tag">industrial AI</span>
+        
+        <span class="tag">fault detection</span>
+        
+      </div>
+      <div class="authors">
+        
+          Zisheng Wang, Junjie Chen, Chisen Wang, Cong Peng, Jianping Xuan, Tielin Shi, Ming J. Zuo
+        
+      </div>
+    </div>
+    
+    <div class="paper">
+      <div class="paper-title">
+        <a href="https://arxiv.org/abs/2601.02443" target="_blank">Evaluating the Diagnostic Classification Ability of Multimodal Large Language Models: Insights from the Osteoarthritis Initiative</a>
+        <span class="score">7.0</span>
+        <span class="venue">arXiv.org</span>
+        <span class="citation-badge">1 citations</span>
+      </div>
+      <div class="tldr">For domain-specific medical classification, LLMs are more effective as interpreters and report generators rather than as primary classifiers, and the MLLM architecture appears less suitable for medical image diagnostic classification tasks that demand high certainty.</div>
+      <div class="summary">本文评估了多模态大语言模型在膝关节骨关节炎放射片分类中的诊断能力。</div>
+      <div class="tags">
+        
+        <span class="tag">medical AI</span>
+        
+        <span class="tag">MLLM evaluation</span>
+        
+        <span class="tag">diagnostic classification</span>
+        
+      </div>
+      <div class="authors">
+        
+          <div class="author-names">
+            Li Wang <span class="h-index">h=5</span>, Xi Chen <span class="h-index">h=1</span>, Xiangwen Deng <span class="h-index">h=2</span>, Huahui Yi <span class="h-index">h=8</span>, ZeKun Jiang <span class="h-index">h=0</span>, Kang Li, Jian Li
+            <span class="h-badge">max h=8</span>
+          </div>
+          
+          
+            
+          
+            
+          
+            
+          
+            
+          
+            
+          
+            
+          
+            
+          
+          
+        
+      </div>
+    </div>
+    
+  </div>
+  
+  <div class="category" id="cat-3">
+    <h2>视频算法 (2)</h2>
+    
+    <div class="paper">
+      <div class="paper-title">
+        <a href="https://www.semanticscholar.org/paper/f852cfec091c38097c9e585872e935fe4bb1ac0a" target="_blank">QuickCut: A Speech and Gesture Driven Framework for Automated Video Editing</a>
+        <span class="score">8.0</span>
+        <span class="venue">IEEE International Conference on Consumer Electronics</span>
+        
+      </div>
+      
+      <div class="summary">一个基于语音和手势驱动的自动视频编辑框架，利用AI简化后期制作。</div>
+      <div class="tags">
+        
+        <span class="tag">video editing</span>
+        
+        <span class="tag">multimodal</span>
+        
+        <span class="tag">automation</span>
+        
+      </div>
+      <div class="authors">
+        
+          Christina Pappachan, Ashan Perera, V. Adzic, H. Kalva
+        
+      </div>
+    </div>
+    
+    <div class="paper">
+      <div class="paper-title">
+        <a href="https://www.semanticscholar.org/paper/9d77791b452db54fa84df744a508fe673c52d808" target="_blank">Research on Application Scenarios and Implementation Pathways of Automated Video Editing Integrating CLIP/YOLO and Large Models under Cloud-Edge Collaboration</a>
+        <span class="score">7.0</span>
+        <span class="venue">Academic Journal of Computing &amp; Information Science</span>
+        
+      </div>
+      <div class="tldr">This work provides a novel perspective for resolving the core industry conflict of "Compute-Security-Adaptability" and lays a solid theoretical foundation for subsequent engineering implementation and technological optimization.</div>
+      <div class="summary">研究集成CLIP/YOLO和大模型的自动视频编辑框架，以适应多场景应用。</div>
+      <div class="tags">
+        
+        <span class="tag">video editing</span>
+        
+        <span class="tag">CLIP</span>
+        
+        <span class="tag">YOLO</span>
+        
+        <span class="tag">cloud-edge</span>
+        
+      </div>
+      <div class="authors">
+        
+          Jiahao Cao
+        
+      </div>
+    </div>
+    
+  </div>
+  
+</main>
+</div>
+
+<script>
+(function() {
+  var sections = document.querySelectorAll('.category, .summary-section');
+  var links = document.querySelectorAll('.sidebar-nav a');
+  if (!sections.length || !links.length) return;
+
+  var observer = new IntersectionObserver(function(entries) {
+    entries.forEach(function(entry) {
+      if (entry.isIntersecting) {
+        links.forEach(function(l) { l.classList.remove('active'); });
+        var id = entry.target.id;
+        var active = document.querySelector('.sidebar-nav a[href="#' + id + '"]');
+        if (active) active.classList.add('active');
+      }
+    });
+  }, { rootMargin: '-20% 0px -60% 0px' });
+
+  sections.forEach(function(s) { observer.observe(s); });
+})();
+</script>
+</body>
+</html>
