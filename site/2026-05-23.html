@@ -1,0 +1,5422 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Paper Tracker - 2026-05-23</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+         color: #333; background: #fafafa; }
+
+  .layout { display: flex; max-width: 1200px; margin: 0 auto; }
+
+  /* Sidebar */
+  .sidebar { width: 220px; position: sticky; top: 0; height: 100vh; overflow-y: auto;
+             padding: 20px 16px; border-right: 1px solid #e0e0e0; background: #fff; flex-shrink: 0; }
+  .sidebar h3 { font-size: 0.85em; color: #666; text-transform: uppercase; letter-spacing: 0.5px;
+                margin-bottom: 12px; }
+  .sidebar-nav { list-style: none; }
+  .sidebar-nav li { margin-bottom: 4px; }
+  .sidebar-nav a { display: block; padding: 6px 10px; border-radius: 6px; color: #333;
+                   text-decoration: none; font-size: 0.9em; transition: background 0.15s; }
+  .sidebar-nav a:hover { background: #e8f0fe; }
+  .sidebar-nav a.active { background: #4a90d9; color: #fff; }
+  .sidebar-nav .nav-count { float: right; color: #999; font-size: 0.8em; }
+  .sidebar-nav a.active .nav-count { color: rgba(255,255,255,0.8); }
+  .sidebar-back { display: block; margin-bottom: 20px; color: #4a90d9; text-decoration: none;
+                  font-size: 0.9em; }
+  .sidebar-meta { font-size: 0.8em; color: #999; margin-top: 16px; padding-top: 12px;
+                  border-top: 1px solid #eee; }
+
+  /* Main content */
+  .main { flex: 1; min-width: 0; padding: 24px 32px; }
+
+  h1 { margin-bottom: 8px; font-size: 1.6em; }
+  .meta { color: #666; margin-bottom: 24px; }
+
+  /* Summary section */
+  .summary-section { background: #fff; border: 1px solid #e0e0e0; border-radius: 12px;
+                     padding: 20px 24px; margin-bottom: 28px;
+                     border-left: 4px solid #667eea; }
+  .summary-section h2 { font-size: 1em; color: #667eea; margin-bottom: 12px;
+                         font-weight: 600; letter-spacing: 0.5px; }
+  .summary-section p { margin: 0; line-height: 1.8; color: #444; font-size: 0.92em; }
+  .summary-section strong { color: #2c3e50; }
+
+  /* Category sections */
+  .category { margin-bottom: 32px; }
+  .category h2 { border-bottom: 2px solid #4a90d9; padding-bottom: 6px; margin-bottom: 16px;
+                 color: #2c3e50; font-size: 1.2em; }
+  .paper { background: #fff; border: 1px solid #e0e0e0; border-radius: 8px; padding: 16px;
+           margin-bottom: 12px; }
+  .paper-title { font-size: 1.05em; font-weight: 600; }
+  .paper-title a { color: #1a0dab; text-decoration: none; }
+  .paper-title a:hover { text-decoration: underline; }
+  .score { display: inline-block; background: #4a90d9; color: #fff; border-radius: 4px;
+           padding: 2px 8px; font-size: 0.85em; margin-left: 8px; }
+  .paper .summary { margin: 8px 0; color: #444; line-height: 1.6; }
+  .tags { margin-top: 6px; }
+  .tag { display: inline-block; background: #e8f0fe; color: #1967d2; border-radius: 3px;
+         padding: 2px 8px; font-size: 0.8em; margin-right: 4px; margin-bottom: 4px; }
+  .authors { font-size: 0.85em; color: #888; margin-top: 4px; }
+  .author-names { line-height: 1.6; }
+  .author-affiliations { margin-top: 3px; }
+  .affil-badge { display: inline-block; background: #e8eaf6; color: #283593; border-radius: 4px;
+                 padding: 3px 10px; font-size: 0.88em; margin-right: 6px; margin-bottom: 4px;
+                 font-weight: 500; letter-spacing: 0.2px; }
+  .h-index { display: inline-block; background: #e8f5e9; color: #2e7d32; border-radius: 3px;
+             padding: 1px 6px; font-size: 0.75em; margin-left: 2px; font-weight: 600; }
+  .h-badge { display: inline-block; background: #fff3e0; color: #e65100; border-radius: 4px;
+             padding: 2px 6px; font-size: 0.8em; margin-left: 8px; }
+  .venue { display: inline-block; background: #f3e5f5; color: #7b1fa2; border-radius: 3px;
+           padding: 2px 8px; font-size: 0.8em; margin-left: 8px; }
+  .citation-badge { display: inline-block; background: #e3f2fd; color: #1565c0; border-radius: 3px;
+                    padding: 2px 8px; font-size: 0.8em; margin-left: 4px; }
+  .tldr { font-size: 0.88em; color: #555; margin: 4px 0; font-style: italic; }
+
+  /* Responsive */
+  @media (max-width: 768px) {
+    .layout { flex-direction: column; }
+    .sidebar { width: 100%; height: auto; position: static; border-right: none;
+               border-bottom: 1px solid #e0e0e0; padding: 12px 16px; }
+    .sidebar-nav { display: flex; flex-wrap: wrap; gap: 4px; }
+    .sidebar-nav li { margin-bottom: 0; }
+    .main { padding: 16px; }
+  }
+</style>
+</head>
+<body>
+<div class="layout">
+
+<!-- Sidebar -->
+<aside class="sidebar">
+  <a href="index.html" class="sidebar-back">&larr; 返回索引</a>
+  <h3>分类导航</h3>
+  <ul class="sidebar-nav">
+    
+    <li><a href="#summary">今日热点</a></li>
+    
+    
+    <li><a href="#cat-1" data-cat="1">图像生成 <span class="nav-count">10</span></a></li>
+    
+    <li><a href="#cat-2" data-cat="2">视频算法 <span class="nav-count">8</span></a></li>
+    
+    <li><a href="#cat-3" data-cat="3">AI Agent <span class="nav-count">33</span></a></li>
+    
+    <li><a href="#cat-4" data-cat="4">多模态大模型 <span class="nav-count">31</span></a></li>
+    
+    <li><a href="#cat-5" data-cat="5">底层视觉 <span class="nav-count">12</span></a></li>
+    
+  </ul>
+  <div class="sidebar-meta">
+    2026-05-23<br>共 94 篇
+  </div>
+</aside>
+
+<!-- Main Content -->
+<main class="main">
+  <h1>Paper Tracker</h1>
+  <p class="meta">2026-05-23 &middot; 94 papers</p>
+
+  
+  <section class="summary-section" id="summary">
+    <h2>今日热点总结</h2>
+    <p><strong>底层视觉</strong>：代理系统与扩散模型深度整合，驱动图像修复向自动化、智能化演进；同时，面向高效部署的模型量化与实时优化成为关键趋势。</p>
+<p><strong>视频算法</strong>：研究焦点从单纯生成转向对视频内容的空间理解与精细运动控制；多智能体系统开始应用于自动化叙事内容创作。</p>
+<p><strong>图像生成</strong>：扩散模型理论趋于系统化；评估体系向智能化、多维度发展；一致性（尤其是故事叙述中的角色与风格）生成成为核心挑战。</p>
+<p><strong>多模态大模型</strong>：能力提升聚焦于深层空间推理与视听模态的统一理解；同时，模型的安全性、鲁棒性及训练效率优化受到高度关注。</p>
+<p><strong>AI Agent</strong>：智能体向具备自我进化与反思能力发展；强调在具身交互、人机协同及复杂系统中的实用化部署与高效协作。</p>
+<p><strong>跨领域趋势</strong>：各领域均从“任务执行”向“深层认知与理解”演进：视觉任务追求语义修复，视频分析强化时空推理，生成内容注重逻辑一致性，智能体则致力于自主规划与推理。</p>
+  </section>
+  
+
+  
+  <div class="category" id="cat-1">
+    <h2>图像生成 (10)</h2>
+    
+    <div class="paper">
+      <div class="paper-title">
+        <a href="https://arxiv.org/abs/2605.22586v1" target="_blank">A Tutorial on Diffusion Theory: From Differential Equations to Diffusion Models</a>
+        <span class="score">10.0</span>
+        
+        
+      </div>
+      
+      <div class="summary">本教程从微分方程的角度系统阐述了扩散模型的理论，涵盖了正向/逆向过程、训练目标、采样方法以及引导采样等核心概念。</div>
+      <div class="tags">
+        
+        <span class="tag">diffusion models</span>
+        
+        <span class="tag">tutorial</span>
+        
+        <span class="tag">score matching</span>
+        
+        <span class="tag">SDE</span>
+        
+        <span class="tag">ODE</span>
+        
+      </div>
+      <div class="authors">
+        
+          <div class="author-names">
+            Jiayi Fu, Yuxia Wang
+            
+          </div>
+          
+          
+            
+              
+            
+          
+            
+          
+          
+          <div class="author-affiliations">
+            <span class="affil-badge">INSAIT, Sofia University “St. Kliment Ohridski”, Bulgaria</span>
+          </div>
+          
+        
+      </div>
+    </div>
+    
+    <div class="paper">
+      <div class="paper-title">
+        <a href="https://arxiv.org/abs/2605.22723v1" target="_blank">The Value of Covariance Matching in Gaussian DDPMs and the Lanczos Sampler</a>
+        <span class="score">9.0</span>
+        
+        
+      </div>
+      
+      <div class="summary">研究了高斯DDPMs中协方差匹配的价值，提出了Lanczos采样器以改进采样质量。</div>
+      <div class="tags">
+        
+        <span class="tag">DDPM</span>
+        
+        <span class="tag">diffusion models</span>
+        
+        <span class="tag">covariance matching</span>
+        
+        <span class="tag">sampling</span>
+        
+      </div>
+      <div class="authors">
+        
+          <div class="author-names">
+            Md Sahil Akhtar, Aymane El Gadarri, Vivek F. Farias, Adam D. Jozefiak
+            
+          </div>
+          
+          
+            
+              
+            
+          
+            
+          
+            
+          
+            
+          
+          
+          <div class="author-affiliations">
+            <span class="affil-badge">Massachusetts Institute of Technology</span>
+          </div>
+          
+        
+      </div>
+    </div>
+    
+    <div class="paper">
+      <div class="paper-title">
+        <a href="https://arxiv.org/abs/2605.22645v1" target="_blank">AtelierEval: Agentic Evaluation of Humans & LLMs as Text-to-Image Prompters</a>
+        <span class="score">9.0</span>
+        
+        
+      </div>
+      
+      <div class="summary">本文提出AtelierEval，首个统一基准，用于评估人类和多模态大语言模型作为文本到图像提示器的提示能力，并设计了基于智能体的评估器AtelierJudge。</div>
+      <div class="tags">
+        
+        <span class="tag">text-to-image</span>
+        
+        <span class="tag">prompt engineering</span>
+        
+        <span class="tag">evaluation</span>
+        
+        <span class="tag">multimodal LLMs</span>
+        
+      </div>
+      <div class="authors">
+        
+          <div class="author-names">
+            Hanjun Luo <span class="h-index">h=5</span>, Zhimu Huang <span class="h-index">h=2</span>, Sylvia Chung, Yiran Wang <span class="h-index">h=40</span>, Yingbin Jin <span class="h-index">h=2</span>, Jialin Li <span class="h-index">h=51</span>, Jiang Li <span class="h-index">h=73</span>, Xinfeng Li <span class="h-index">h=31</span>, Hanan Salam <span class="h-index">h=13</span>
+            <span class="h-badge">max h=73</span>
+          </div>
+          
+          
+            
+              
+            
+          
+            
+              
+            
+          
+            
+          
+            
+              
+            
+          
+            
+              
+            
+          
+            
+              
+            
+          
+            
+              
+            
+          
+            
+              
+            
+          
+            
+              
+            
+          
+          
+          <div class="author-affiliations">
+            <span class="affil-badge">Nissan (United Kingdom)</span><span class="affil-badge">Shenzhen University</span><span class="affil-badge">Chinese Academy of Sciences</span><span class="affil-badge">Zhejiang University</span><span class="affil-badge">Tianjin University of Technology and Education</span><span class="affil-badge">Shihezi University</span><span class="affil-badge">Chongqing University</span><span class="affil-badge">New York University Abu Dhabi</span>
+          </div>
+          
+        
+      </div>
+    </div>
+    
+    <div class="paper">
+      <div class="paper-title">
+        <a href="https://arxiv.org/abs/2605.22448v1" target="_blank">S2ED: From Story to Executable Descriptions for Consistency-Aware Story Illustration</a>
+        <span class="score">9.0</span>
+        
+        
+      </div>
+      
+      <div class="summary">本文提出S2ED框架，将完整故事转化为可执行描述序列，以实现一致性感知的故事插图，通过多智能体协调保证叙事分解和角色身份的一致性。</div>
+      <div class="tags">
+        
+        <span class="tag">story illustration</span>
+        
+        <span class="tag">text-to-image</span>
+        
+        <span class="tag">consistency</span>
+        
+        <span class="tag">multi-agent coordination</span>
+        
+      </div>
+      <div class="authors">
+        
+          <div class="author-names">
+            Sijing Yin <span class="h-index">h=1</span>, Jiamou Liu <span class="h-index">h=19</span>, Xiao Tang <span class="h-index">h=36</span>, Yaser Shakib, Qian Liu <span class="h-index">h=119</span>
+            <span class="h-badge">max h=119</span>
+          </div>
+          
+          
+            
+              
+            
+          
+            
+              
+            
+          
+            
+              
+            
+          
+            
+          
+            
+              
+            
+          
+          
+          <div class="author-affiliations">
+            <span class="affil-badge">Sun Yat-sen University</span><span class="affil-badge">University of Auckland</span><span class="affil-badge">University of South Carolina Upstate</span><span class="affil-badge">University of Shanghai for Science and Technology</span>
+          </div>
+          
+        
+      </div>
+    </div>
+    
+    <div class="paper">
+      <div class="paper-title">
+        <a href="https://arxiv.org/abs/2605.22777v1" target="_blank">DecQ: Detail-Condensing Queries for Enhanced Reconstruction and Generation in Representation Autoencoders</a>
+        <span class="score">8.0</span>
+        
+        
+      </div>
+      
+      <div class="summary">DecQ提出一种细节凝聚查询框架，用于改进表示自编码器中的重建和生成性能，通过轻量级查询提取细粒度信息。</div>
+      <div class="tags">
+        
+        <span class="tag">autoencoder</span>
+        
+        <span class="tag">diffusion model</span>
+        
+        <span class="tag">image generation</span>
+        
+        <span class="tag">reconstruction</span>
+        
+      </div>
+      <div class="authors">
+        
+          <div class="author-names">
+            Tianhang Wang, Yitong Chen, Wei Song, Zuxuan Wu <span class="h-index">h=42</span>, Min Li <span class="h-index">h=85</span>, Jiaqi Wang <span class="h-index">h=67</span>
+            <span class="h-badge">max h=85</span>
+          </div>
+          
+          
+            
+              
+            
+          
+            
+              
+            
+          
+            
+          
+            
+              
+            
+          
+            
+              
+            
+          
+            
+              
+            
+          
+          
+          <div class="author-affiliations">
+            <span class="affil-badge">Zhejiang University</span><span class="affil-badge">Shanghai Innovation Institute</span><span class="affil-badge">Shanghai Institute of Computing Technology</span><span class="affil-badge">Hong Kong Baptist University</span><span class="affil-badge">Shenyang Pharmaceutical University</span>
+          </div>
+          
+        
+      </div>
+    </div>
+    
+    <div class="paper">
+      <div class="paper-title">
+        <a href="https://arxiv.org/abs/2605.22668v1" target="_blank">SEGA: Spectral-Energy Guided Attention for Resolution Extrapolation in Diffusion Transformers</a>
+        <span class="score">8.0</span>
+        
+        
+      </div>
+      
+      <div class="summary">SEGA提出一种训练免费的方法，通过频谱能量引导的注意力缩放，改进扩散变换器在高分辨率图像生成中的性能。</div>
+      <div class="tags">
+        
+        <span class="tag">diffusion transformer</span>
+        
+        <span class="tag">image generation</span>
+        
+        <span class="tag">resolution extrapolation</span>
+        
+        <span class="tag">attention</span>
+        
+      </div>
+      <div class="authors">
+        
+          <div class="author-names">
+            Javad Rajabi, Kimia Shaban, Koorosh Roohi, David B. Lindell, Babak Taati
+            
+          </div>
+          
+          
+            
+              
+            
+          
+            
+          
+            
+          
+            
+          
+            
+          
+          
+          <div class="author-affiliations">
+            <span class="affil-badge">University of Toronto</span>
+          </div>
+          
+        
+      </div>
+    </div>
+    
+    <div class="paper">
+      <div class="paper-title">
+        <a href="https://arxiv.org/abs/2605.22469v1" target="_blank">MaSC: A Masked Similarity Metric for Evaluating Concept-Driven Generation</a>
+        <span class="score">8.0</span>
+        
+        
+      </div>
+      
+      <div class="summary">提出一种掩码相似度度量，用于评估文本到图像扩散模型中的概念驱动生成，基于前景掩码分解评估。</div>
+      <div class="tags">
+        
+        <span class="tag">image generation</span>
+        
+        <span class="tag">diffusion models</span>
+        
+        <span class="tag">evaluation metrics</span>
+        
+      </div>
+      <div class="authors">
+        
+          <div class="author-names">
+            Patryk Bartkowiak, Lennart Petersen, Bartosz Kotrys, Dominik Michels, Soren Pirk, Wojtek Palubicki
+            
+          </div>
+          
+          
+            
+              
+            
+          
+            
+              
+            
+          
+            
+              
+            
+          
+            
+              
+            
+          
+            
+          
+            
+          
+          
+          <div class="author-affiliations">
+            <span class="affil-badge">Adam Mickiewicz University</span><span class="affil-badge">Kiel University</span><span class="affil-badge">ArtCollect</span><span class="affil-badge">KAUST</span>
+          </div>
+          
+        
+      </div>
+    </div>
+    
+    <div class="paper">
+      <div class="paper-title">
+        <a href="https://arxiv.org/abs/2605.22311v1" target="_blank">PIU: Proximity-guided Identity Unlearning in ID-Conditioned Diffusion Models</a>
+        <span class="score">8.0</span>
+        
+        
+      </div>
+      
+      <div class="summary">提出PIU框架，用于在身份条件扩散模型中进行身份遗忘，通过锚点引导和局部微调实现。</div>
+      <div class="tags">
+        
+        <span class="tag">identity unlearning</span>
+        
+        <span class="tag">diffusion models</span>
+        
+        <span class="tag">face generation</span>
+        
+      </div>
+      <div class="authors">
+        
+          <div class="author-names">
+            Jose Edgar Hernandez Cancino Estrada, Mauro Díaz Lupone, Žiga Emeršič, Vitomir Štruc, Peter Peer, Darian Tomašević
+            
+          </div>
+          
+          
+            
+              
+            
+          
+            
+          
+            
+          
+            
+              
+            
+          
+            
+          
+            
+          
+          
+          <div class="author-affiliations">
+            <span class="affil-badge">University of Ljubljana, Faculty of Computer and Information Science, Ljubljana, Slovenia</span><span class="affil-badge">University of Ljubljana, Faculty of Electrical Engineering, Ljubljana, Slovenia</span>
+          </div>
+          
+        
+      </div>
+    </div>
+    
+    <div class="paper">
+      <div class="paper-title">
+        <a href="https://arxiv.org/abs/2605.21116v1" target="_blank">GeoDiff-SAR II: 3D-Driven Foundation Diffusion Models for SAR Generation via Decoupled Control</a>
+        <span class="score">8.0</span>
+        
+        
+      </div>
+      
+      <div class="summary">提出了GeoDiff-SAR II，一个基于3D模型引导的解耦框架，用于可控的SAR图像生成。</div>
+      <div class="tags">
+        
+        <span class="tag">SAR</span>
+        
+        <span class="tag">image generation</span>
+        
+        <span class="tag">diffusion models</span>
+        
+        <span class="tag">controllability</span>
+        
+      </div>
+      <div class="authors">
+        
+          <div class="author-names">
+            Xuanting Wu, Fan Zhang, Fei Ma, Yingbing Liu, Lingxiao Peng <span class="h-index">h=7</span>, Qiang Yin, Yongsheng Zhou
+            <span class="h-badge">max h=7</span>
+          </div>
+          
+          
+            
+              
+            
+          
+            
+          
+            
+          
+            
+          
+            
+              
+            
+          
+            
+          
+            
+          
+          
+          <div class="author-affiliations">
+            <span class="affil-badge">College of Information Science and Technology</span><span class="affil-badge">Chinese Academy of Sciences</span>
+          </div>
+          
+        
+      </div>
+    </div>
+    
+    <div class="paper">
+      <div class="paper-title">
+        <a href="https://arxiv.org/abs/2605.22420v1" target="_blank">Diffusion-guided Generalizable Enhancer for Urban Scene Reconstruction</a>
+        <span class="score">7.0</span>
+        
+        
+      </div>
+      
+      <div class="summary">提出GenRe，一种基于扩散引导的通用增强器，用于城市场景重建，通过学习生成先验来修复三维表示。</div>
+      <div class="tags">
+        
+        <span class="tag">diffusion models</span>
+        
+        <span class="tag">scene reconstruction</span>
+        
+        <span class="tag">autonomous driving</span>
+        
+      </div>
+      <div class="authors">
+        
+          <div class="author-names">
+            Henry Che, Jingkang Wang, Yun Chen, Ze Yang, Sivabalan Manivasagam, Raquel Urtasun
+            
+          </div>
+          
+          
+            
+              
+            
+          
+            
+              
+            
+          
+            
+          
+            
+          
+            
+          
+            
+          
+          
+          <div class="author-affiliations">
+            <span class="affil-badge">Waabi; University of Illinois Urbana-Champaign</span><span class="affil-badge">Waabi; University of Toronto</span>
+          </div>
+          
+        
+      </div>
+    </div>
+    
+  </div>
+  
+  <div class="category" id="cat-2">
+    <h2>视频算法 (8)</h2>
+    
+    <div class="paper">
+      <div class="paper-title">
+        <a href="https://arxiv.org/abs/2605.22819v1" target="_blank">Cambrian-P: Pose-Grounded Video Understanding</a>
+        <span class="score">9.0</span>
+        
+        
+      </div>
+      
+      <div class="summary">Cambrian-P通过引入每帧可学习的相机位姿标记和位姿回归头，增强了视频多模态大模型的空间推理能力，在多个视频问答基准上取得显著提升。</div>
+      <div class="tags">
+        
+        <span class="tag">video understanding</span>
+        
+        <span class="tag">camera pose</span>
+        
+        <span class="tag">multimodal LLM</span>
+        
+        <span class="tag">spatial reasoning</span>
+        
+      </div>
+      <div class="authors">
+        
+          <div class="author-names">
+            Jihan Yang, Zifan Zhao, Xichen Pan, Shusheng Yang, Junyi Zhang, Bingyi Kang, Hu Xu, Saining Xie
+            
+          </div>
+          
+          
+            
+              
+            
+          
+            
+          
+            
+          
+            
+          
+            
+              
+            
+          
+            
+          
+            
+              
+            
+          
+            
+          
+          
+          <div class="author-affiliations">
+            <span class="affil-badge">New York University</span><span class="affil-badge">UC Berkeley</span><span class="affil-badge">Meta FAIR</span>
+          </div>
+          
+        
+      </div>
+    </div>
+    
+    <div class="paper">
+      <div class="paper-title">
+        <a href="https://arxiv.org/abs/2605.22818v1" target="_blank">MotiMotion: Motion-Controlled Video Generation with Visual Reasoning</a>
+        <span class="score">9.0</span>
+        
+        
+      </div>
+      
+      <div class="summary">MotiMotion提出一种将运动控制重新定义为推理-生成问题的框架，通过视觉语言推理器优化运动轨迹，实现更自然的视频生成。</div>
+      <div class="tags">
+        
+        <span class="tag">video generation</span>
+        
+        <span class="tag">motion control</span>
+        
+        <span class="tag">visual reasoning</span>
+        
+        <span class="tag">image-to-video</span>
+        
+      </div>
+      <div class="authors">
+        
+          <div class="author-names">
+            Lee Hsin-Ying, Hanwen Jiang <span class="h-index">h=13</span>, Yiqun Mei <span class="h-index">h=9</span>, Jing Shi <span class="h-index">h=51</span>, Ming-Hsuan Yang <span class="h-index">h=4</span>, Zhixin Shu <span class="h-index">h=18</span>
+            <span class="h-badge">max h=51</span>
+          </div>
+          
+          
+            
+          
+            
+              
+            
+          
+            
+          
+            
+              
+            
+          
+            
+              
+            
+          
+            
+          
+          
+          <div class="author-affiliations">
+            <span class="affil-badge">East China University of Science and Technology</span><span class="affil-badge">Singapore Institute of Technology</span><span class="affil-badge">University of California, Merced</span>
+          </div>
+          
+        
+      </div>
+    </div>
+    
+    <div class="paper">
+      <div class="paper-title">
+        <a href="https://arxiv.org/abs/2605.22344v1" target="_blank">Bernini: Latent Semantic Planning for Video Diffusion</a>
+        <span class="score">9.0</span>
+        
+        
+      </div>
+      
+      <div class="summary">提出Bernini，一个统一的视频生成和编辑框架，利用多模态大语言模型进行语义规划，DiT进行像素合成。</div>
+      <div class="tags">
+        
+        <span class="tag">video generation</span>
+        
+        <span class="tag">diffusion models</span>
+        
+        <span class="tag">multimodal planning</span>
+        
+      </div>
+      <div class="authors">
+        
+          <div class="author-names">
+            Bernini Team, Chenchen Liu, Junyi Chen, Lei Li, Lu Chi, Mingzhen Sun, Zhuoying Li, Yi Fu, Ruoyu Guo, Yiheng Wu, Ge Bai, Zehuan Yuan
+            
+          </div>
+          
+          
+            
+              
+            
+          
+            
+          
+            
+          
+            
+          
+            
+          
+            
+          
+            
+          
+            
+          
+            
+          
+            
+          
+            
+          
+            
+          
+          
+          <div class="author-affiliations">
+            <span class="affil-badge">Bytedance</span>
+          </div>
+          
+        
+      </div>
+    </div>
+    
+    <div class="paper">
+      <div class="paper-title">
+        <a href="https://arxiv.org/abs/2605.22718v1" target="_blank">WorldKV: Efficient World Memory with World Retrieval and Compression</a>
+        <span class="score">8.0</span>
+        
+        
+      </div>
+      
+      <div class="summary">WorldKV提出一种训练免费的框架，通过世界检索和世界压缩，在自回归视频扩散模型中实现高效的世界记忆和一致性。</div>
+      <div class="tags">
+        
+        <span class="tag">video diffusion</span>
+        
+        <span class="tag">world generation</span>
+        
+        <span class="tag">memory efficiency</span>
+        
+        <span class="tag">autoregressive</span>
+        
+      </div>
+      <div class="authors">
+        
+          <div class="author-names">
+            Jung Yi, Minjae Kim, Paul Hyunbin Cho, Wooseok Jang, Sangdoo Yun, Seungryong Kim
+            
+          </div>
+          
+          
+            
+              
+            
+          
+            
+          
+            
+          
+            
+          
+            
+              
+            
+          
+            
+          
+          
+          <div class="author-affiliations">
+            <span class="affil-badge">KAIST AI</span><span class="affil-badge">Naver AI Lab</span>
+          </div>
+          
+        
+      </div>
+    </div>
+    
+    <div class="paper">
+      <div class="paper-title">
+        <a href="https://arxiv.org/abs/2605.22269v1" target="_blank">MuKV: Multi-Grained KV Cache Compression for Long Streaming Video Question-Answering</a>
+        <span class="score">8.0</span>
+        
+        
+      </div>
+      
+      <div class="summary">提出多粒度KV缓存压缩方法，提高长流视频问答的效率和准确性。</div>
+      <div class="tags">
+        
+        <span class="tag">video QA</span>
+        
+        <span class="tag">KV cache</span>
+        
+        <span class="tag">multimodal LLM</span>
+        
+        <span class="tag">compression</span>
+        
+      </div>
+      <div class="authors">
+        
+          <div class="author-names">
+            Junbin Xiao, Jiajun Chen, Tianxiang Sun, Xun Yang, Angela Yao
+            
+          </div>
+          
+          
+            
+              
+            
+          
+            
+              
+            
+          
+            
+          
+            
+              
+            
+          
+            
+          
+          
+          <div class="author-affiliations">
+            <span class="affil-badge">University of Science and Technology of China; National University of Singapore</span><span class="affil-badge">National University of Singapore</span><span class="affil-badge">University of Science and Technology of China</span>
+          </div>
+          
+        
+      </div>
+    </div>
+    
+    <div class="paper">
+      <div class="paper-title">
+        <a href="https://arxiv.org/abs/2605.22201v1" target="_blank">Zero-Shot Temporal Action Localization Through Textual Guidance</a>
+        <span class="score">8.0</span>
+        
+        
+      </div>
+      
+      <div class="summary">提出通过文本指导的零样本时序动作定位方法，利用语言模型改进细粒度动作分类。</div>
+      <div class="tags">
+        
+        <span class="tag">zero-shot learning</span>
+        
+        <span class="tag">action localization</span>
+        
+        <span class="tag">video understanding</span>
+        
+        <span class="tag">multimodal</span>
+        
+      </div>
+      <div class="authors">
+        
+          <div class="author-names">
+            Benedetta Liberatori, Alessandro Conti, Lorenzo Vaquero, Paolo Rota, Yiming Wang, Elisa Ricci
+            
+          </div>
+          
+          
+            
+              
+            
+          
+            
+          
+            
+              
+            
+          
+            
+          
+            
+          
+            
+          
+          
+          <div class="author-affiliations">
+            <span class="affil-badge">University of Trento</span><span class="affil-badge">Fondazione Bruno Kessler</span>
+          </div>
+          
+        
+      </div>
+    </div>
+    
+    <div class="paper">
+      <div class="paper-title">
+        <a href="https://arxiv.org/abs/2605.22144v1" target="_blank">One Sentence, One Drama: Personalized Short-Form Drama Generation via Multi-Agent Systems</a>
+        <span class="score">8.0</span>
+        
+        
+      </div>
+      
+      <div class="summary">提出通过多智能体系统从一句话生成个性化短剧的框架。</div>
+      <div class="tags">
+        
+        <span class="tag">video generation</span>
+        
+        <span class="tag">multi-agent</span>
+        
+        <span class="tag">personalized content</span>
+        
+        <span class="tag">short drama</span>
+        
+      </div>
+      <div class="authors">
+        
+          <div class="author-names">
+            Yufei Shi, Weilong Yan, Naixuan Huang, Yucheng Chen, Chenyu Zhang, Tao He, Si Yong Yeo, Ming Li
+            
+          </div>
+          
+          
+            
+              
+            
+          
+            
+              
+            
+          
+            
+          
+            
+          
+            
+              
+            
+          
+            
+              
+            
+          
+            
+          
+            
+              
+            
+          
+          
+          <div class="author-affiliations">
+            <span class="affil-badge">MedVisAI Lab, Lee Kong Chian School of Medicine, Nanyang Technological University</span><span class="affil-badge">National University of Singapore</span><span class="affil-badge">Beijing Institute of Technology</span><span class="affil-badge">University of Electronic Science and Technology of China</span><span class="affil-badge">Guangming Laboratory</span>
+          </div>
+          
+        
+      </div>
+    </div>
+    
+    <div class="paper">
+      <div class="paper-title">
+        <a href="https://arxiv.org/abs/2605.22550v1" target="_blank">MOTOR: A Multimodal Dataset for Two-Wheeler Rider Behavior Understanding</a>
+        <span class="score">7.0</span>
+        
+        
+      </div>
+      
+      <div class="summary">提供了一个用于理解两轮车骑行行为的大规模多模态数据集，涵盖视频、眼动追踪和传感器数据。</div>
+      <div class="tags">
+        
+        <span class="tag">video understanding</span>
+        
+        <span class="tag">multimodal dataset</span>
+        
+        <span class="tag">action recognition</span>
+        
+      </div>
+      <div class="authors">
+        
+          <div class="author-names">
+            Varun A. Paturkar, Shankar Gangisetty, C. V. Jawahar
+            
+          </div>
+          
+          
+            
+              
+            
+          
+            
+          
+            
+          
+          
+          <div class="author-affiliations">
+            <span class="affil-badge">CVIT, IIIT-Hyderabad, India</span>
+          </div>
+          
+        
+      </div>
+    </div>
+    
+  </div>
+  
+  <div class="category" id="cat-3">
+    <h2>AI Agent (33)</h2>
+    
+    <div class="paper">
+      <div class="paper-title">
+        <a href="https://arxiv.org/abs/2605.22812v1" target="_blank">GesVLA: Gesture-Aware Vision-Language-Action Model Embedded Representations</a>
+        <span class="score">9.0</span>
+        
+        
+      </div>
+      
+      <div class="summary">GesVLA将手势作为并行指令模态，提出手势感知的视觉-语言-动作模型，增强机器人操作中的目标定位和人机交互效率。</div>
+      <div class="tags">
+        
+        <span class="tag">VLA</span>
+        
+        <span class="tag">gesture control</span>
+        
+        <span class="tag">robot manipulation</span>
+        
+        <span class="tag">multimodal model</span>
+        
+      </div>
+      <div class="authors">
+        
+          <div class="author-names">
+            Wenxuan Guo, Ziyuan Li, Meng Zhang, Yichen Liu, Yimeng Dong, Chuxi Xu, Yunfei Wei, Ze Chen, Erjin Zhou, Jianjiang Feng
+            
+          </div>
+          
+          
+            
+              
+            
+          
+            
+          
+            
+              
+            
+          
+            
+          
+            
+          
+            
+          
+            
+          
+            
+          
+            
+          
+            
+          
+          
+          <div class="author-affiliations">
+            <span class="affil-badge">Tsinghua University</span><span class="affil-badge">Dexmal</span>
+          </div>
+          
+        
+      </div>
+    </div>
+    
+    <div class="paper">
+      <div class="paper-title">
+        <a href="https://arxiv.org/abs/2605.22671v1" target="_blank">From Abstraction to Instantiation: Learning Behavioral Representation for Vision-Language-Action Model</a>
+        <span class="score">9.0</span>
+        
+        
+      </div>
+      
+      <div class="summary">BehaviorVLA提出一种通过学习时间连贯行为表示的框架，提升视觉-语言-动作模型在分布偏移下的鲁棒性和数据效率。</div>
+      <div class="tags">
+        
+        <span class="tag">VLA</span>
+        
+        <span class="tag">behavior representation</span>
+        
+        <span class="tag">robot manipulation</span>
+        
+        <span class="tag">generalization</span>
+        
+      </div>
+      <div class="authors">
+        
+          <div class="author-names">
+            Bing Hu <span class="h-index">h=57</span>, Zaijing Li <span class="h-index">h=2</span>, Rui Shao <span class="h-index">h=23</span>, Junda Chen <span class="h-index">h=19</span>, April Hua Liu, Wei-Shi Zheng, Liqiang Nie <span class="h-index">h=76</span>
+            <span class="h-badge">max h=76</span>
+          </div>
+          
+          
+            
+              
+            
+          
+            
+          
+            
+              
+            
+          
+            
+              
+            
+          
+            
+          
+            
+          
+            
+              
+            
+          
+          
+          <div class="author-affiliations">
+            <span class="affil-badge">Nanjing Agricultural University</span><span class="affil-badge">Hefei University of Technology</span><span class="affil-badge">Northeast Forestry University</span><span class="affil-badge">Shenzhen Institute of Information Technology</span>
+          </div>
+          
+        
+      </div>
+    </div>
+    
+    <div class="paper">
+      <div class="paper-title">
+        <a href="https://arxiv.org/abs/2605.22794v1" target="_blank">MOSS: Self-Evolution through Source-Level Rewriting in Autonomous Agent Systems</a>
+        <span class="score">9.0</span>
+        
+        
+      </div>
+      
+      <div class="summary">提出了MOSS系统，通过源码级重写实现自主智能体系统的自我进化。</div>
+      <div class="tags">
+        
+        <span class="tag">autonomous agents</span>
+        
+        <span class="tag">self-evolution</span>
+        
+        <span class="tag">source-level rewriting</span>
+        
+      </div>
+      <div class="authors">
+        
+          <div class="author-names">
+            Qianshu Cai, Yonggang Zhang, Xianzhang Jia, Wei Xue, Jun Song, Xinmei Tian, Yike Guo
+            
+          </div>
+          
+          
+            
+              
+            
+          
+            
+              
+            
+          
+            
+          
+            
+          
+            
+              
+            
+          
+            
+              
+            
+          
+            
+          
+          
+          <div class="author-affiliations">
+            <span class="affil-badge">MoE Key Laboratory of Brain-inspired Intelligent Perception and Cognition, University of Science and Technology of China; The Hong Kong University of Science and Technology</span><span class="affil-badge">The Hong Kong University of Science and Technology</span><span class="affil-badge">Hong Kong Baptist University</span><span class="affil-badge">MoE Key Laboratory of Brain-inspired Intelligent Perception and Cognition, University of Science and Technology of China</span>
+          </div>
+          
+        
+      </div>
+    </div>
+    
+    <div class="paper">
+      <div class="paper-title">
+        <a href="https://arxiv.org/abs/2605.22781v1" target="_blank">DeltaBox: Scaling Stateful AI Agents with Millisecond-Level Sandbox Checkpoint/Rollback</a>
+        <span class="score">9.0</span>
+        
+        
+      </div>
+      
+      <div class="summary">提出了DeltaBox，一个具有毫秒级沙箱检查点/回滚能力的可扩展有状态AI智能体系统。</div>
+      <div class="tags">
+        
+        <span class="tag">AI agents</span>
+        
+        <span class="tag">checkpointing</span>
+        
+        <span class="tag">rollback</span>
+        
+        <span class="tag">sandbox</span>
+        
+      </div>
+      <div class="authors">
+        
+          <div class="author-names">
+            Yunpeng Dong, Jingkai He, Yuze Hou, Dong Du, Zhonghu Xu, Si Yu, Yubin Xia, Haibo Chen
+            
+          </div>
+          
+          
+            
+              
+            
+          
+            
+              
+            
+          
+            
+          
+            
+          
+            
+              
+            
+          
+            
+          
+            
+          
+            
+          
+          
+          <div class="author-affiliations">
+            <span class="affil-badge">Institute of Parallel and Distributed Systems, Shanghai Jiao Tong University</span><span class="affil-badge">Institute of Parallel and Distributed Systems, Shanghai Jiao Tong University; Engineering Research Center for Domain-specific Operating Systems, Ministry of Education, China</span><span class="affil-badge">Huawei Technologies Co., Ltd</span>
+          </div>
+          
+        
+      </div>
+    </div>
+    
+    <div class="paper">
+      <div class="paper-title">
+        <a href="https://arxiv.org/abs/2605.22748v1" target="_blank">Superhuman Safe and Agile Racing through Multi-Agent Reinforcement Learning</a>
+        <span class="score">9.0</span>
+        
+        
+      </div>
+      
+      <div class="summary">通过多智能体强化学习实现超级人类安全和敏捷的无人机竞速。</div>
+      <div class="tags">
+        
+        <span class="tag">multi-agent reinforcement learning</span>
+        
+        <span class="tag">autonomous racing</span>
+        
+        <span class="tag">safety</span>
+        
+        <span class="tag">quadrotor</span>
+        
+      </div>
+      <div class="authors">
+        
+          <div class="author-names">
+            Ismail Geles, Leonard Bauersfeld, Markus Wulfmeier, Davide Scaramuzza
+            
+          </div>
+          
+          
+            
+              
+            
+          
+            
+          
+            
+          
+            
+          
+          
+          <div class="author-affiliations">
+            <span class="affil-badge">Leonard BauersfeldRobotics and Perception Group, University of Zurich, Zurich, Switzerland</span>
+          </div>
+          
+        
+      </div>
+    </div>
+    
+    <div class="paper">
+      <div class="paper-title">
+        <a href="https://arxiv.org/abs/2605.22662v1" target="_blank">Claw AI Lab: An Autonomous Multi-Agent Research Team</a>
+        <span class="score">9.0</span>
+        
+        
+      </div>
+      
+      <div class="summary">本文提出了Claw AI Lab，一个实验室原生的自主研究平台，通过多智能体协作、实时监控和代码运行工具将自动化研究提升为交互式、可控的AI实验室环境。</div>
+      <div class="tags">
+        
+        <span class="tag">autonomous agents</span>
+        
+        <span class="tag">multi-agent systems</span>
+        
+        <span class="tag">research automation</span>
+        
+        <span class="tag">tool use</span>
+        
+      </div>
+      <div class="authors">
+        
+          <div class="author-names">
+            Fan Wu, Cheng Chen, Zhenshan Tan, Taiyu Zhang, Xinzhen Xu, Yanyu Qian, Dingcheng Gao, Lanyun Zhu, Qi Zhu, Yi Tan, Deyi Ji <span class="h-index">h=13</span>, Guosheng Lin <span class="h-index">h=49</span>, Tianrun Chen <span class="h-index">h=16</span>, Deheng Ye <span class="h-index">h=17</span>, Fayao Liu <span class="h-index">h=24</span>
+            <span class="h-badge">max h=49</span>
+          </div>
+          
+          
+            
+              
+            
+          
+            
+              
+            
+          
+            
+              
+            
+          
+            
+              
+            
+          
+            
+          
+            
+          
+            
+              
+            
+          
+            
+          
+            
+          
+            
+              
+            
+          
+            
+          
+            
+              
+            
+          
+            
+              
+            
+          
+            
+              
+            
+          
+            
+          
+          
+          <div class="author-affiliations">
+            <span class="affil-badge">NTU</span><span class="affil-badge">NTU, A*STAR</span><span class="affil-badge">NUIST</span><span class="affil-badge">Moxin Technology Co., LTD</span><span class="affil-badge">THU</span><span class="affil-badge">USTC</span><span class="affil-badge">Fujian University of Traditional Chinese Medicine</span><span class="affil-badge">Zhejiang University of Science and Technology</span><span class="affil-badge">Tencent (China)</span>
+          </div>
+          
+        
+      </div>
+    </div>
+    
+    <div class="paper">
+      <div class="paper-title">
+        <a href="https://arxiv.org/abs/2605.22502v1" target="_blank">Compiling Agentic Workflows into LLM Weights: Near-Frontier Quality at Two Orders of Magnitude Less Cost</a>
+        <span class="score">9.0</span>
+        
+        
+      </div>
+      
+      <div class="summary">本文提出将智能体工作流编译到大语言模型权重中（“地下智能体”），以减少成本和延迟，并通过实验验证其在旅行预订、客服和保险理赔等任务中的有效性。</div>
+      <div class="tags">
+        
+        <span class="tag">agent orchestration</span>
+        
+        <span class="tag">workflow compilation</span>
+        
+        <span class="tag">LLM efficiency</span>
+        
+        <span class="tag">cost reduction</span>
+        
+      </div>
+      <div class="authors">
+        
+          <div class="author-names">
+            Simon Dennis, Rivaan Patil, Kevin Shabahang, Hao Guo
+            
+          </div>
+          
+          
+            
+              
+            
+          
+            
+          
+            
+          
+            
+          
+          
+          <div class="author-affiliations">
+            <span class="affil-badge">University of Melbourne</span>
+          </div>
+          
+        
+      </div>
+    </div>
+    
+    <div class="paper">
+      <div class="paper-title">
+        <a href="https://arxiv.org/abs/2605.22343v1" target="_blank">Sibyl-AutoResearch: Autonomous Research Needs Self-Evolving Trial-and-Error Harnesses, Not Paper Generators</a>
+        <span class="score">9.0</span>
+        
+        
+      </div>
+      
+      <div class="summary">本文提出Sibyl-AutoResearch框架，强调自主研究需要自进化的试错工具而非论文生成器，通过可审计的转换单元将试错经验转化为系统改进。</div>
+      <div class="tags">
+        
+        <span class="tag">autonomous research</span>
+        
+        <span class="tag">self-evolution</span>
+        
+        <span class="tag">trial-and-error</span>
+        
+        <span class="tag">AI scientists</span>
+        
+      </div>
+      <div class="authors">
+        
+          <div class="author-names">
+            Chengcheng Wang, Qinhua Xie, Wei He, Jianyuan Guo, Shiqi Wang, Chang Xu
+            
+          </div>
+          
+          
+            
+              
+            
+          
+            
+              
+            
+          
+            
+              
+            
+          
+            
+              
+            
+          
+            
+          
+            
+          
+          
+          <div class="author-affiliations">
+            <span class="affil-badge">University of Sydney</span><span class="affil-badge">East China Normal University</span><span class="affil-badge">TokenRhythm AI</span><span class="affil-badge">City University of Hong Kong</span>
+          </div>
+          
+        
+      </div>
+    </div>
+    
+    <div class="paper">
+      <div class="paper-title">
+        <a href="https://arxiv.org/abs/2605.22287v1" target="_blank">SciCore-Mol: Augmenting Large Language Models with Pluggable Molecular Cognition Modules</a>
+        <span class="score">9.0</span>
+        
+        
+      </div>
+      
+      <div class="summary">本文提出SciCore-Mol框架，通过三个可插拔的认知模块（拓扑感知、分子生成和反应推理）增强大语言模型，使其具备分子科学领域的专业知识，展示了AI智能体使用专用工具的潜力。</div>
+      <div class="tags">
+        
+        <span class="tag">LLM augmentation</span>
+        
+        <span class="tag">molecular science</span>
+        
+        <span class="tag">modular agents</span>
+        
+        <span class="tag">tool use</span>
+        
+      </div>
+      <div class="authors">
+        
+          <div class="author-names">
+            Yuxuan Chen, Changwei Lv, Yunduo Xiao, Zhongjing Du, Daquan Zhou, Yukun Yan, Zheni Zeng, Zhiyuan Liu
+            
+          </div>
+          
+          
+            
+              
+            
+          
+            
+          
+            
+          
+            
+          
+            
+          
+            
+          
+            
+          
+            
+          
+          
+          <div class="author-affiliations">
+            <span class="affil-badge">Zheni Zeng3,*and Zhiyuan Liu2,*1School of Electronic and Computer Engineering, Peking University, Shenzhen, China2Tsinghua University, Beijing, China3School of Intelligence Science and Technology, Nanjing University, Suzhou, Chinazengzn@nju.edu.cn, liuzy@tsinghua.edu.cn</span>
+          </div>
+          
+        
+      </div>
+    </div>
+    
+    <div class="paper">
+      <div class="paper-title">
+        <a href="https://arxiv.org/abs/2605.22177v1" target="_blank">Maestro: Reinforcement Learning to Orchestrate Hierarchical Model-Skill Ensembles</a>
+        <span class="score">9.0</span>
+        
+        
+      </div>
+      
+      <div class="summary">本文提出Maestro，一个由强化学习驱动的编排框架，它训练一个轻量级策略来动态组合不同的专家模型和技能库，以处理异构的多模态任务。</div>
+      <div class="tags">
+        
+        <span class="tag">agent orchestration</span>
+        
+        <span class="tag">reinforcement learning</span>
+        
+        <span class="tag">model ensemble</span>
+        
+        <span class="tag">multimodal</span>
+        
+      </div>
+      <div class="authors">
+        
+          <div class="author-names">
+            Jinyang Wu, Guocheng Zhai, Ruihan Jin, Yuhao Shen, Zhengxi Lu <span class="h-index">h=5</span>, Fan Zhang <span class="h-index">h=125</span>, Haoran Luo <span class="h-index">h=19</span>, Zheng Lian <span class="h-index">h=23</span>, Zhengqi Wen <span class="h-index">h=24</span>, Jianhua Tao <span class="h-index">h=45</span>
+            <span class="h-badge">max h=125</span>
+          </div>
+          
+          
+            
+              
+            
+          
+            
+          
+            
+          
+            
+              
+            
+          
+            
+              
+            
+          
+            
+              
+            
+          
+            
+              
+            
+          
+            
+              
+            
+          
+            
+          
+            
+          
+          
+          <div class="author-affiliations">
+            <span class="affil-badge">Tsinghua University</span><span class="affil-badge">Zhejiang University</span><span class="affil-badge">Shenzhen University</span><span class="affil-badge">Google (United States)</span><span class="affil-badge">Southwest University</span><span class="affil-badge">Qingdao University</span>
+          </div>
+          
+        
+      </div>
+    </div>
+    
+    <div class="paper">
+      <div class="paper-title">
+        <a href="https://arxiv.org/abs/2605.22138v1" target="_blank">Efficient Agentic Reasoning Through Self-Regulated Simulative Planning</a>
+        <span class="score">9.0</span>
+        
+        
+      </div>
+      
+      <div class="summary">本文提出SR²AM框架，将高效代理推理分解为模拟推理（系统II）、自调节（系统III）和反应执行（系统I），通过学习何时以及如何深度规划来提升推理效率。</div>
+      <div class="tags">
+        
+        <span class="tag">agentic reasoning</span>
+        
+        <span class="tag">simulative planning</span>
+        
+        <span class="tag">self-regulation</span>
+        
+        <span class="tag">world model</span>
+        
+      </div>
+      <div class="authors">
+        
+          <div class="author-names">
+            Mingkai Deng <span class="h-index">h=3</span>, Jinyu Hou <span class="h-index">h=21</span>, Lara Sá Neves, Varad Pimpalkhute <span class="h-index">h=3</span>, Taylor W. Killian <span class="h-index">h=7</span>, Zhengzhong Liu <span class="h-index">h=16</span>, Eric P. Xing <span class="h-index">h=96</span>
+            <span class="h-badge">max h=96</span>
+          </div>
+          
+          
+            
+              
+            
+          
+            
+              
+            
+          
+            
+          
+            
+          
+            
+          
+            
+          
+            
+              
+            
+          
+          
+          <div class="author-affiliations">
+            <span class="affil-badge">Carnegie Mellon University</span><span class="affil-badge">Chinese Academy of Sciences</span><span class="affil-badge">Washington University in St. Louis</span>
+          </div>
+          
+        
+      </div>
+    </div>
+    
+    <div class="paper">
+      <div class="paper-title">
+        <a href="https://arxiv.org/abs/2605.22001v1" target="_blank">Blind Spots in the Guard: How Domain-Camouflaged Injection Attacks Evade Detection in Multi-Agent LLM Systems</a>
+        <span class="score">9.0</span>
+        
+        
+      </div>
+      
+      <div class="summary">本文研究了在多智能体大语言模型系统中，领域伪装注入攻击如何规避检测，揭示了现有检测器的盲点。</div>
+      <div class="tags">
+        
+        <span class="tag">multi-agent systems</span>
+        
+        <span class="tag">injection attacks</span>
+        
+        <span class="tag">LLM security</span>
+        
+      </div>
+      <div class="authors">
+        
+          <div class="author-names">
+            Aaditya Pai
+            
+          </div>
+          
+          
+            
+              
+            
+          
+          
+          <div class="author-affiliations">
+            <span class="affil-badge">Data Science Institute Columbia University</span>
+          </div>
+          
+        
+      </div>
+    </div>
+    
+    <div class="paper">
+      <div class="paper-title">
+        <a href="https://arxiv.org/abs/2605.21902v1" target="_blank">Planning in the LLM Era: Building for Reliability and Efficiency</a>
+        <span class="score">9.0</span>
+        
+        
+      </div>
+      
+      <div class="summary">本文探讨了在大语言模型时代下智能体的规划能力，强调可靠性和效率的构建。</div>
+      <div class="tags">
+        
+        <span class="tag">planning</span>
+        
+        <span class="tag">LLM agents</span>
+        
+        <span class="tag">reliability</span>
+        
+      </div>
+      <div class="authors">
+        
+          <div class="author-names">
+            Michael Katz <span class="h-index">h=47</span>, Harsha Kokel <span class="h-index">h=3</span>, Kavitha Srinivas <span class="h-index">h=32</span>, Shirin Sohrabi <span class="h-index">h=19</span>
+            <span class="h-badge">max h=47</span>
+          </div>
+          
+          
+            
+              
+            
+          
+            
+          
+            
+          
+            
+          
+          
+          <div class="author-affiliations">
+            <span class="affil-badge">Wilfrid Laurier University</span>
+          </div>
+          
+        
+      </div>
+    </div>
+    
+    <div class="paper">
+      <div class="paper-title">
+        <a href="https://arxiv.org/abs/2605.22816v1" target="_blank">AwareVLN: Reasoning with Self-awareness for Vision-Language Navigation</a>
+        <span class="score">8.0</span>
+        
+        
+      </div>
+      
+      <div class="summary">AwareVLN提出一种具有自感知推理机制的视觉语言导航框架，通过结构化推理模块和自动数据引擎提升导航性能。</div>
+      <div class="tags">
+        
+        <span class="tag">vision-language navigation</span>
+        
+        <span class="tag">AI agent</span>
+        
+        <span class="tag">spatial reasoning</span>
+        
+        <span class="tag">multimodal model</span>
+        
+      </div>
+      <div class="authors">
+        
+          <div class="author-names">
+            Wenxuan Guo, Xiuwei Xu, Yichen Liu, Xiangyu Li, Hang Yin, Huangxing Chen, Wenzhao Zheng, Jianjiang Feng, Jie Zhou, Jiwen Lu
+            
+          </div>
+          
+          
+            
+              
+            
+          
+            
+          
+            
+          
+            
+          
+            
+          
+            
+          
+            
+          
+            
+          
+            
+          
+            
+          
+          
+          <div class="author-affiliations">
+            <span class="affil-badge">Tsinghua University, China</span>
+          </div>
+          
+        
+      </div>
+    </div>
+    
+    <div class="paper">
+      <div class="paper-title">
+        <a href="https://arxiv.org/abs/2605.22366v1" target="_blank">AgroTools: A Benchmark for Tool-Augmented Multimodal Agents in Agriculture</a>
+        <span class="score">8.0</span>
+        
+        
+      </div>
+      
+      <div class="summary">提出AgroTools基准，用于评估农业中工具增强的多模态智能体，涵盖多种农业任务和工具使用。</div>
+      <div class="tags">
+        
+        <span class="tag">AI agents</span>
+        
+        <span class="tag">tool use</span>
+        
+        <span class="tag">multimodal benchmark</span>
+        
+      </div>
+      <div class="authors">
+        
+          <div class="author-names">
+            Zi Ye, Yibin Wen, Xiaoya Fan, Xinyu Zhang, Jing Wu, Kun Zeng, Zurong Mai, Jiarui Zhang, Bohan Shi, Juepeng Zheng, Jianxi Huang <span class="h-index">h=46</span>, Yutong Lu <span class="h-index">h=38</span>, Haohuan Fu <span class="h-index">h=45</span>
+            <span class="h-badge">max h=46</span>
+          </div>
+          
+          
+            
+              
+            
+          
+            
+          
+            
+              
+            
+          
+            
+          
+            
+          
+            
+          
+            
+          
+            
+          
+            
+              
+            
+          
+            
+              
+            
+          
+            
+              
+            
+          
+            
+          
+            
+              
+            
+          
+          
+          <div class="author-affiliations">
+            <span class="affil-badge">Sun Yat-Sen University</span><span class="affil-badge">Southwest University</span><span class="affil-badge">Northeastern University</span><span class="affil-badge">Sun Yat-Sen University; National Supercomputing Center in Shenzhen</span><span class="affil-badge">Shenzhen University</span><span class="affil-badge">University Town of Shenzhen</span>
+          </div>
+          
+        
+      </div>
+    </div>
+    
+    <div class="paper">
+      <div class="paper-title">
+        <a href="https://arxiv.org/abs/2605.22786v1" target="_blank">LCGuard: Latent Communication Guard for Safe KV Sharing in Multi-Agent Systems</a>
+        <span class="score">8.0</span>
+        
+        
+      </div>
+      
+      <div class="summary">提出了LCGuard，一个用于多智能体系统中安全KV缓存共享的潜在通信守护框架。</div>
+      <div class="tags">
+        
+        <span class="tag">multi-agent systems</span>
+        
+        <span class="tag">KV cache</span>
+        
+        <span class="tag">safety</span>
+        
+        <span class="tag">LLM</span>
+        
+      </div>
+      <div class="authors">
+        
+          <div class="author-names">
+            Sadia Asif, Mohammad Mohammadi Amiri, Momin Abbas, Prasanna Sattigeri <span class="h-index">h=27</span>, Karthikeyan Natesan Ramamurthy <span class="h-index">h=24</span>
+            <span class="h-badge">max h=27</span>
+          </div>
+          
+          
+            
+              
+            
+          
+            
+          
+            
+              
+            
+          
+            
+          
+            
+          
+          
+          <div class="author-affiliations">
+            <span class="affil-badge">Rensselaer Polytechnic Institute</span><span class="affil-badge">IBM Research</span>
+          </div>
+          
+        
+      </div>
+    </div>
+    
+    <div class="paper">
+      <div class="paper-title">
+        <a href="https://arxiv.org/abs/2605.22763v1" target="_blank">Advancing Mathematics Research with AI-Driven Formal Proof Search</a>
+        <span class="score">8.0</span>
+        
+        
+      </div>
+      
+      <div class="summary">利用AI驱动的自动证明搜索推进数学研究，解决了开放的Erdős问题。</div>
+      <div class="tags">
+        
+        <span class="tag">formal proof search</span>
+        
+        <span class="tag">LLM</span>
+        
+        <span class="tag">mathematics</span>
+        
+        <span class="tag">AI agent</span>
+        
+      </div>
+      <div class="authors">
+        
+          <div class="author-names">
+            George Tsoukalas, Anton Kovsharov, Sergey Shirobokov, Anja Surina, Moritz Firsching, Gergely Bérczi, Francisco J. R. Ruiz, Arun Suggala, Adam Zsolt Wagner, Eric Wieser, Lei Yu, Aja Huang, Miklós Z. Horváth, Andrew Ferrauiolo, Henryk Michalewski, Codrut Grosu, Thomas Hubert, Matej Balog, Pushmeet Kohli, Swarat Chaudhuri
+            
+          </div>
+          
+          
+            
+              
+            
+          
+            
+          
+            
+          
+            
+          
+            
+          
+            
+          
+            
+          
+            
+          
+            
+          
+            
+          
+            
+          
+            
+          
+            
+          
+            
+          
+            
+          
+            
+          
+            
+          
+            
+          
+            
+          
+            
+          
+          
+          <div class="author-affiliations">
+            <span class="affil-badge">Anja SurinaGoogle DeepMind111†Equal contributions. The first three authors are in random order. Correspondence topushmeet@google.comandswarat@google.com.</span>
+          </div>
+          
+        
+      </div>
+    </div>
+    
+    <div class="paper">
+      <div class="paper-title">
+        <a href="https://arxiv.org/abs/2605.22693v1" target="_blank">Scout-Assisted Planning for Heterogeneous Robot Teams under Partially Known Environments</a>
+        <span class="score">8.0</span>
+        
+        
+      </div>
+      
+      <div class="summary">提出了侦察辅助规划框架，用于部分已知环境中异构机器人团队的导航。</div>
+      <div class="tags">
+        
+        <span class="tag">robot teams</span>
+        
+        <span class="tag">planning</span>
+        
+        <span class="tag">heterogeneous agents</span>
+        
+        <span class="tag">scout UAVs</span>
+        
+      </div>
+      <div class="authors">
+        
+          <div class="author-names">
+            Hoang-Dung Bui, Abhish Khanal, Raihan Islam Arnob, Gregory J. Stein
+            
+          </div>
+          
+          
+            
+              
+            
+          
+            
+          
+            
+          
+            
+          
+          
+          <div class="author-affiliations">
+            <span class="affil-badge">Gregory J. SteinGeorge Mason University{hbui20, akhanal7, rarnob, gjstein}@gmu.edu</span>
+          </div>
+          
+        
+      </div>
+    </div>
+    
+    <div class="paper">
+      <div class="paper-title">
+        <a href="https://arxiv.org/abs/2605.22642v1" target="_blank">Spreadsheet-RL: Advancing Large Language Model Agents on Realistic Spreadsheet Tasks via Reinforcement Learning</a>
+        <span class="score">8.0</span>
+        
+        
+      </div>
+      
+      <div class="summary">本文提出Spreadsheet-RL，一种基于强化学习的微调框架，用于在真实的Microsoft Excel环境中训练专门的电子表格智能体，显著提升了电子表格任务性能。</div>
+      <div class="tags">
+        
+        <span class="tag">LLM agents</span>
+        
+        <span class="tag">reinforcement learning</span>
+        
+        <span class="tag">spreadsheet automation</span>
+        
+        <span class="tag">tool use</span>
+        
+      </div>
+      <div class="authors">
+        
+          <div class="author-names">
+            Banghao Chi, Yining Xie, Mingyuan Wu, Jingcheng Yang, Jize Jiang, Zhaoheng Li, Shengyi Qian, Minjia Zhang, Klara Nahrstedt, Rui Hou, Xiangjun Fan <span class="h-index">h=10</span>, Hanchao Yu <span class="h-index">h=16</span>
+            <span class="h-badge">max h=16</span>
+          </div>
+          
+          
+            
+              
+            
+          
+            
+          
+            
+          
+            
+          
+            
+          
+            
+          
+            
+              
+            
+          
+            
+          
+            
+          
+            
+          
+            
+              
+            
+          
+            
+          
+          
+          <div class="author-affiliations">
+            <span class="affil-badge">University of Illinois Urbana-Champaign</span><span class="affil-badge">Meta</span><span class="affil-badge">Nantong University</span>
+          </div>
+          
+        
+      </div>
+    </div>
+    
+    <div class="paper">
+      <div class="paper-title">
+        <a href="https://arxiv.org/abs/2605.22634v1" target="_blank">Contractual Skills: A GovernSpec Design Framework for Enterprise AI Agents</a>
+        <span class="score">8.0</span>
+        
+        
+      </div>
+      
+      <div class="summary">本文提出Contractual Skills，一种基于GovernSpec的设计框架，将智能体技能组织为可读的任务契约，旨在提升企业AI智能体的可检查性和可维护性。</div>
+      <div class="tags">
+        
+        <span class="tag">AI agent skills</span>
+        
+        <span class="tag">governance</span>
+        
+        <span class="tag">enterprise AI</span>
+        
+        <span class="tag">tool integration</span>
+        
+      </div>
+      <div class="authors">
+        
+          <div class="author-names">
+            Ting Liu
+            
+          </div>
+          
+          
+            
+              
+            
+          
+          
+          <div class="author-affiliations">
+            <span class="affil-badge">SymbolicLight Research Foshan, Guangdong, China</span>
+          </div>
+          
+        
+      </div>
+    </div>
+    
+    <div class="paper">
+      <div class="paper-title">
+        <a href="https://arxiv.org/abs/2605.22602v1" target="_blank">Think Thrice Before You Speak: Dual knowledge-enhanced Theory-of-Mind Reasoning for Persuasive Agents</a>
+        <span class="score">8.0</span>
+        
+        
+      </div>
+      
+      <div class="summary">本文针对说服性对话任务，提出基于心智理论（ToM）的逐步推理框架TTBYS，通过双知识增强提升大语言模型对欲望、信念和说服策略的推理能力。</div>
+      <div class="tags">
+        
+        <span class="tag">persuasive agents</span>
+        
+        <span class="tag">Theory of Mind</span>
+        
+        <span class="tag">dialogue reasoning</span>
+        
+        <span class="tag">LLM reasoning</span>
+        
+      </div>
+      <div class="authors">
+        
+          <div class="author-names">
+            Minghui Ma <span class="h-index">h=17</span>, Bin Guo, Runze Yang, Mengqi Chen, Yan Liu, Jingqi Liu, Yahan Pei, Xuehao Ma, Qiuyun Zhang <span class="h-index">h=41</span>, Zhiwen Yu
+            <span class="h-badge">max h=41</span>
+          </div>
+          
+          
+            
+              
+            
+          
+            
+              
+            
+          
+            
+          
+            
+          
+            
+          
+            
+          
+            
+          
+            
+          
+            
+              
+            
+          
+            
+              
+            
+          
+          
+          <div class="author-affiliations">
+            <span class="affil-badge">Shanghai University of Engineering Science</span><span class="affil-badge">Northwestern Polytechnical University</span><span class="affil-badge">Anshun University</span><span class="affil-badge">Harbin Engineering University</span>
+          </div>
+          
+        
+      </div>
+    </div>
+    
+    <div class="paper">
+      <div class="paper-title">
+        <a href="https://arxiv.org/abs/2605.22511v1" target="_blank">Search-E1: Self-Distillation Drives Self-Evolution in Search-Augmented Reasoning</a>
+        <span class="score">8.0</span>
+        
+        
+      </div>
+      
+      <div class="summary">本文提出Search-E1，一种自进化方法，通过简单的GRPO和离线自蒸馏让搜索增强智能体自我改进，在多个问答基准上达到领先性能。</div>
+      <div class="tags">
+        
+        <span class="tag">search-augmented reasoning</span>
+        
+        <span class="tag">self-evolution</span>
+        
+        <span class="tag">self-distillation</span>
+        
+        <span class="tag">LLM agents</span>
+        
+      </div>
+      <div class="authors">
+        
+          <div class="author-names">
+            Zihan Liang <span class="h-index">h=4</span>, Yufei Ma <span class="h-index">h=56</span>, Ben Chen <span class="h-index">h=36</span>, Zhipeng Qian <span class="h-index">h=8</span>, Xuxin Zhang <span class="h-index">h=18</span>, Huangyu Dai, Lingtao Mao <span class="h-index">h=25</span>
+            <span class="h-badge">max h=56</span>
+          </div>
+          
+          
+            
+              
+            
+          
+            
+              
+            
+          
+            
+              
+            
+          
+            
+          
+            
+              
+            
+          
+            
+          
+            
+              
+            
+          
+          
+          <div class="author-affiliations">
+            <span class="affil-badge">Ministry of Education of the People's Republic of China</span><span class="affil-badge">University of Electronic Science and Technology of China</span><span class="affil-badge">Northwest Institute of Eco-Environment and Resources</span><span class="affil-badge">Chinese Academy of Sciences</span><span class="affil-badge">China University of Mining and Technology</span>
+          </div>
+          
+        
+      </div>
+    </div>
+    
+    <div class="paper">
+      <div class="paper-title">
+        <a href="https://arxiv.org/abs/2605.22363v1" target="_blank">Incentive-Aligned Vehicle-to-Vehicle Energy Trading via Nash-Integrated Multi-Agent Reinforcement Learning</a>
+        <span class="score">8.0</span>
+        
+        
+      </div>
+      
+      <div class="summary">本文将纳什议价解集成到多智能体深度确定性策略梯度中（Nash-MADDPG），用于激励对齐的车辆间能源交易，显著提升社会福利和交易公平性。</div>
+      <div class="tags">
+        
+        <span class="tag">multi-agent reinforcement learning</span>
+        
+        <span class="tag">energy trading</span>
+        
+        <span class="tag">Nash bargaining</span>
+        
+        <span class="tag">incentive alignment</span>
+        
+      </div>
+      <div class="authors">
+        
+          <div class="author-names">
+            Yujin Lin <span class="h-index">h=4</span>, Yue Yang <span class="h-index">h=55</span>, Hao Wang <span class="h-index">h=88</span>
+            <span class="h-badge">max h=88</span>
+          </div>
+          
+          
+            
+              
+            
+          
+            
+              
+            
+          
+            
+              
+            
+          
+          
+          <div class="author-affiliations">
+            <span class="affil-badge">Fuzhou University</span><span class="affil-badge">Changchun University of Science and Technology</span><span class="affil-badge">Vaughn College of Aeronautics and Technology</span>
+          </div>
+          
+        
+      </div>
+    </div>
+    
+    <div class="paper">
+      <div class="paper-title">
+        <a href="https://arxiv.org/abs/2605.22321v1" target="_blank">Benchmarking Autonomous Agents against Temporal, Spatial, and Semantic Evasions</a>
+        <span class="score">8.0</span>
+        
+        
+      </div>
+      
+      <div class="summary">本文针对自主智能体提出多维规避攻击框架（时间、空间、语义规避），构建A3S-Bench基准并揭示现有系统的架构级漏洞。</div>
+      <div class="tags">
+        
+        <span class="tag">agent security</span>
+        
+        <span class="tag">evasion attacks</span>
+        
+        <span class="tag">benchmarking</span>
+        
+        <span class="tag">vulnerability analysis</span>
+        
+      </div>
+      <div class="authors">
+        
+          <div class="author-names">
+            Jianan Ma, Xiaohu Du, Ruixiao Lin, Yaoxiang Bian, Jialuo Chen, Jingyi Wang, Xiaofang Yang, Shiwen Cui, Changhua Meng, Xinhao Deng, Zhen Wang
+            
+          </div>
+          
+          
+            
+              
+            
+          
+            
+          
+            
+          
+            
+          
+            
+          
+            
+          
+            
+          
+            
+          
+            
+          
+            
+          
+            
+          
+          
+          <div class="author-affiliations">
+            <span class="affil-badge">Ant Group</span>
+          </div>
+          
+        
+      </div>
+    </div>
+    
+    <div class="paper">
+      <div class="paper-title">
+        <a href="https://arxiv.org/abs/2605.22300v1" target="_blank">Cross-domain benchmarks reveal when coordinated AI agents improve scientific inference from partial evidence</a>
+        <span class="score">8.0</span>
+        
+        
+      </div>
+      
+      <div class="summary">本文通过跨学科基准评估协调AI智能体在部分证据下的科学推理能力，确定了协调智能体改善性能、溯源或表征的三种运行机制。</div>
+      <div class="tags">
+        
+        <span class="tag">coordinated agents</span>
+        
+        <span class="tag">scientific inference</span>
+        
+        <span class="tag">cross-domain benchmarking</span>
+        
+        <span class="tag">multi-agent evaluation</span>
+        
+      </div>
+      <div class="authors">
+        
+          <div class="author-names">
+            Fiona Y. Wong, Markus J. Buehler
+            
+          </div>
+          
+          
+            
+              
+            
+          
+            
+          
+          
+          <div class="author-affiliations">
+            <span class="affil-badge">Massachusetts Institute of Technology</span>
+          </div>
+          
+        
+      </div>
+    </div>
+    
+    <div class="paper">
+      <div class="paper-title">
+        <a href="https://arxiv.org/abs/2605.22057v1" target="_blank">FlyRoute: Self-Evolving Agent Profiling via Data Flywheel for Adaptive Task Routing</a>
+        <span class="score">8.0</span>
+        
+        
+      </div>
+      
+      <div class="summary">本文提出FlyRoute，一个自进化的代理画像框架，通过数据飞轮持续收集真实流量证据，更新代理能力描述，从而实现更精准的自适应任务路由。</div>
+      <div class="tags">
+        
+        <span class="tag">agent routing</span>
+        
+        <span class="tag">capability profiling</span>
+        
+        <span class="tag">data flywheel</span>
+        
+        <span class="tag">enterprise AI</span>
+        
+      </div>
+      <div class="authors">
+        
+          <div class="author-names">
+            Rongjun Li, Ziyu Zhou, Yihang Wu
+            
+          </div>
+          
+          
+            
+              
+            
+          
+            
+          
+            
+          
+          
+          <div class="author-affiliations">
+            <span class="affil-badge">IT Innovation and Research Center, Huawei Technologies</span>
+          </div>
+          
+        
+      </div>
+    </div>
+    
+    <div class="paper">
+      <div class="paper-title">
+        <a href="https://arxiv.org/abs/2605.21984v1" target="_blank">Echo: Learning from Experience Data via User-Driven Refinement</a>
+        <span class="score">8.0</span>
+        
+        
+      </div>
+      
+      <div class="summary">本文提出了Echo框架，通过用户驱动的优化从经验数据中学习，以提升智能体性能。</div>
+      <div class="tags">
+        
+        <span class="tag">agent learning</span>
+        
+        <span class="tag">experience data</span>
+        
+        <span class="tag">user refinement</span>
+        
+      </div>
+      <div class="authors">
+        
+          <div class="author-names">
+            Hande Dong <span class="h-index">h=5</span>, Xiaoyun Liang <span class="h-index">h=19</span>, Jiarui Yu <span class="h-index">h=15</span>, Jiayi Lin <span class="h-index">h=19</span>, Changqing Ai <span class="h-index">h=4</span>, Feng Liu <span class="h-index">h=137</span>, Wenjun Zhang <span class="h-index">h=113</span>, Rongbi Wei, Chaofan Zhu <span class="h-index">h=22</span>, Linjie Che, Feng Wu <span class="h-index">h=138</span>, Xin Shen <span class="h-index">h=39</span>, Dexu Kong <span class="h-index">h=23</span>, Xiaotian Wang <span class="h-index">h=44</span>, Qiuyuan Chen <span class="h-index">h=9</span>, Bingxu An, Yueting Lei, Qiang Lin <span class="h-index">h=44</span>
+            <span class="h-badge">max h=138</span>
+          </div>
+          
+          
+            
+              
+            
+          
+            
+              
+            
+          
+            
+              
+            
+          
+            
+              
+            
+          
+            
+              
+            
+          
+            
+              
+            
+          
+            
+              
+            
+          
+            
+          
+            
+          
+            
+          
+            
+              
+            
+          
+            
+              
+            
+          
+            
+              
+            
+          
+            
+              
+            
+          
+            
+              
+            
+          
+            
+          
+            
+          
+            
+              
+            
+          
+          
+          <div class="author-affiliations">
+            <span class="affil-badge">Tencent (China)</span><span class="affil-badge">Xinjiang Agricultural University</span><span class="affil-badge">Chinese Academy of Sciences</span><span class="affil-badge">China Medical University</span><span class="affil-badge">Shanghai East Hospital</span><span class="affil-badge">Sinopec (China)</span><span class="affil-badge">Chuzhou University</span><span class="affil-badge">Kunming University of Science and Technology</span><span class="affil-badge">Shenyang University of Technology</span><span class="affil-badge">Qingdao University</span><span class="affil-badge">Nanjing Tech University</span><span class="affil-badge">Guangzhou University of Chinese Medicine</span><span class="affil-badge">Hainan Normal University</span>
+          </div>
+          
+        
+      </div>
+    </div>
+    
+    <div class="paper">
+      <div class="paper-title">
+        <a href="https://arxiv.org/abs/2605.21850v1" target="_blank">ACC: Compiling Agent Trajectories for Long-Context Training</a>
+        <span class="score">8.0</span>
+        
+        
+      </div>
+      
+      <div class="summary">本文提出ACC方法，将智能体轨迹编译为长上下文训练数据，以提升长距离依赖推理能力。</div>
+      <div class="tags">
+        
+        <span class="tag">agent trajectories</span>
+        
+        <span class="tag">long-context training</span>
+        
+        <span class="tag">reasoning</span>
+        
+      </div>
+      <div class="authors">
+        
+          <div class="author-names">
+            Qisheng Su, Zhen Fang, Shiting Huang, Yu Zeng, Yiming Zhao, Kou Shi, Ziao Zhang, Lin Chen, Zehui Chen, Lijun Wu, Feng Zhao <span class="h-index">h=63</span>
+            <span class="h-badge">max h=63</span>
+          </div>
+          
+          
+            
+              
+            
+          
+            
+              
+            
+          
+            
+          
+            
+          
+            
+          
+            
+          
+            
+          
+            
+          
+            
+          
+            
+              
+            
+          
+            
+              
+            
+          
+          
+          <div class="author-affiliations">
+            <span class="affil-badge">MoE Key Lab of BIPC, University of Science and Technology of China; Shanghai Innovation Institute</span><span class="affil-badge">MoE Key Lab of BIPC, University of Science and Technology of China</span><span class="affil-badge">Shanghai AI Laboratory</span><span class="affil-badge">Chinese Academy of Sciences</span>
+          </div>
+          
+        
+      </div>
+    </div>
+    
+    <div class="paper">
+      <div class="paper-title">
+        <a href="https://arxiv.org/abs/2605.22568v1" target="_blank">Measuring Security Without Fooling Ourselves: Why Benchmarking Agents Is Hard</a>
+        <span class="score">7.0</span>
+        
+        
+      </div>
+      
+      <div class="summary">本文分析了当前AI智能体安全评估基准的三个核心挑战（基准漏洞、时间过时、运行时不确定性），并提出了构建更稳健评估框架的实用方向。</div>
+      <div class="tags">
+        
+        <span class="tag">AI agent security</span>
+        
+        <span class="tag">benchmarking</span>
+        
+        <span class="tag">evaluation</span>
+        
+        <span class="tag">trustworthiness</span>
+        
+      </div>
+      <div class="authors">
+        
+          <div class="author-names">
+            Sahar Abdelnabi <span class="h-index">h=7</span>, Chris Hicks, Konrad Rieck, Ahmad-Reza Sadeghi
+            <span class="h-badge">max h=7</span>
+          </div>
+          
+          
+            
+              
+            
+          
+            
+              
+            
+          
+            
+              
+            
+          
+            
+              
+            
+          
+          
+          <div class="author-affiliations">
+            <span class="affil-badge">University of Massachusetts Amherst</span><span class="affil-badge">The Alan Turing Institute, London, UK</span><span class="affil-badge">BIFOLD & Technische Universität Berlin, Germany</span><span class="affil-badge">Technische Universität Darmstadt, Germany</span>
+          </div>
+          
+        
+      </div>
+    </div>
+    
+    <div class="paper">
+      <div class="paper-title">
+        <a href="https://arxiv.org/abs/2605.22456v1" target="_blank">Steins;Gate Drive: Semantic Safety Arbitration over Structured Futures for Latency-Decoupled LLM Planning</a>
+        <span class="score">7.0</span>
+        
+        
+      </div>
+      
+      <div class="summary">本文提出SteinsGateDrive，一种延迟解耦的规划-运行时架构，使用大语言模型选择反事实驾驶未来，并通过原子谓词运行时检查确保安全，实现自动驾驶规划。</div>
+      <div class="tags">
+        
+        <span class="tag">autonomous driving</span>
+        
+        <span class="tag">LLM planning</span>
+        
+        <span class="tag">safety</span>
+        
+        <span class="tag">world models</span>
+        
+      </div>
+      <div class="authors">
+        
+          <div class="author-names">
+            Anjie Qiu, Hans D. Schotten
+            
+          </div>
+          
+          
+            
+              
+            
+          
+            
+              
+            
+          
+          
+          <div class="author-affiliations">
+            <span class="affil-badge">Institute for Wireless Communication and Navigation, RPTU University Kaiserslautern-Landau, Kaiserslautern, Germany</span><span class="affil-badge">Institute for Wireless Communication and Navigation, RPTU University Kaiserslautern-Landau, Kaiserslautern, Germany; Intelligent Networks Research Group (IN), German Research Center for Artificial Intelligence (DFKI), Kaiserslautern, Germany</span>
+          </div>
+          
+        
+      </div>
+    </div>
+    
+    <div class="paper">
+      <div class="paper-title">
+        <a href="https://arxiv.org/abs/2605.22355v1" target="_blank">TransitLM: A Large-Scale Dataset and Benchmark for Map-Free Transit Route Generation</a>
+        <span class="score">7.0</span>
+        
+        
+      </div>
+      
+      <div class="summary">本文发布TransitLM大规模数据集和基准，支持无地图公交路线生成，训练的大语言模型能直接从起止点信息生成结构有效路线。</div>
+      <div class="tags">
+        
+        <span class="tag">transit planning</span>
+        
+        <span class="tag">map-free</span>
+        
+        <span class="tag">LLM benchmark</span>
+        
+        <span class="tag">route generation</span>
+        
+      </div>
+      <div class="authors">
+        
+          <div class="author-names">
+            Hanyu Guo, Jiedong Yang, Chao Chen, Longfei Xu, Kaikui Liu, Xiangxiang Chu
+            
+          </div>
+          
+          
+            
+              
+            
+          
+            
+          
+            
+          
+            
+          
+            
+          
+            
+          
+          
+          <div class="author-affiliations">
+            <span class="affil-badge">AMAP, Alibaba Group Beijing, China</span>
+          </div>
+          
+        
+      </div>
+    </div>
+    
+    <div class="paper">
+      <div class="paper-title">
+        <a href="https://arxiv.org/abs/2605.21965v1" target="_blank">SpecHop: Continuous Speculation for Accelerating Multi-Hop Retrieval Agents</a>
+        <span class="score">7.0</span>
+        
+        
+      </div>
+      
+      <div class="summary">本文提出SpecHop，一种连续推测框架，用于加速多跳检索智能体，减少延迟。</div>
+      <div class="tags">
+        
+        <span class="tag">multi-hop retrieval</span>
+        
+        <span class="tag">speculation</span>
+        
+        <span class="tag">agent acceleration</span>
+        
+      </div>
+      <div class="authors">
+        
+          <div class="author-names">
+            Mehrdad Saberi, Keivan Rezaei, Soheil Feizi
+            
+          </div>
+          
+          
+            
+              
+            
+          
+            
+          
+            
+          
+          
+          <div class="author-affiliations">
+            <span class="affil-badge">University of Maryland, College Park</span>
+          </div>
+          
+        
+      </div>
+    </div>
+    
+    <div class="paper">
+      <div class="paper-title">
+        <a href="https://arxiv.org/abs/2605.21781v1" target="_blank">Reflective Prompt Tuning through Language Model Function-Calling</a>
+        <span class="score">7.0</span>
+        
+        
+      </div>
+      
+      <div class="summary">本文提出反射性提示调优框架，通过语言模型函数调用自动优化提示。</div>
+      <div class="tags">
+        
+        <span class="tag">prompt tuning</span>
+        
+        <span class="tag">function calling</span>
+        
+        <span class="tag">LLM optimization</span>
+        
+      </div>
+      <div class="authors">
+        
+          <div class="author-names">
+            Farima Fatahi Bayat, Moin Aminnaseri, Pouya Pezeshkpour, Estevam Hruschka
+            
+          </div>
+          
+          
+            
+              
+            
+          
+            
+          
+            
+          
+            
+          
+          
+          <div class="author-affiliations">
+            <span class="affil-badge">Megagon Labs</span>
+          </div>
+          
+        
+      </div>
+    </div>
+    
+  </div>
+  
+  <div class="category" id="cat-4">
+    <h2>多模态大模型 (31)</h2>
+    
+    <div class="paper">
+      <div class="paper-title">
+        <a href="https://arxiv.org/abs/2605.22558v1" target="_blank">GeoWeaver: Grounding Visual Tokens with Geometric Evidence before Scene Reasoning</a>
+        <span class="score">9.0</span>
+        
+        
+      </div>
+      
+      <div class="summary">提出GeoWeaver，一种预推理几何接地框架，通过构建多级几何库和标记自适应几何证据分配，增强视觉语言模型的时空推理能力。</div>
+      <div class="tags">
+        
+        <span class="tag">geometric grounding</span>
+        
+        <span class="tag">vision-language models</span>
+        
+        <span class="tag">spatio-temporal reasoning</span>
+        
+        <span class="tag">multimodal</span>
+        
+      </div>
+      <div class="authors">
+        
+          <div class="author-names">
+            Deshui Miao, Xingsen Huang, Yameng Gu, Xin Li, Haijun Zhang <span class="h-index">h=56</span>, Ming-Hsuan Yang <span class="h-index">h=4</span>
+            <span class="h-badge">max h=56</span>
+          </div>
+          
+          
+            
+              
+            
+          
+            
+              
+            
+          
+            
+          
+            
+          
+            
+          
+            
+              
+            
+          
+          
+          <div class="author-affiliations">
+            <span class="affil-badge">Harbin Institute of Technology, Shenzhen</span><span class="affil-badge">Hainan University</span><span class="affil-badge">University of California, Merced</span>
+          </div>
+          
+        
+      </div>
+    </div>
+    
+    <div class="paper">
+      <div class="paper-title">
+        <a href="https://arxiv.org/abs/2605.22012v1" target="_blank">LatentOmni: Rethinking Omni-Modal Understanding via Unified Audio-Visual Latent Reasoning</a>
+        <span class="score">9.0</span>
+        
+        
+      </div>
+      
+      <div class="summary">本文提出LatentOmni框架，通过在统一潜在空间中交错文本推理与音视频潜在状态来进行跨模态推理，并构建了相应的指令微调数据集，在多个音视频推理基准上取得领先。</div>
+      <div class="tags">
+        
+        <span class="tag">multimodal reasoning</span>
+        
+        <span class="tag">latent space</span>
+        
+        <span class="tag">audio-visual</span>
+        
+        <span class="tag">omni-modal understanding</span>
+        
+      </div>
+      <div class="authors">
+        
+          <div class="author-names">
+            Yifan Dai, Zhenhua Wu, Bohan Zeng, Daili Hua, Jialing Liu, Bozhou Li, Yuran Wang, Chengzhuo Tong, Hao Liang, Xiaochen Ma, Junbo Niu <span class="h-index">h=5</span>, Tianyu Guo <span class="h-index">h=30</span>, Yang Shi <span class="h-index">h=106</span>, Yue Ding <span class="h-index">h=30</span>, Yiyan Ji <span class="h-index">h=0</span>, Bingyin Mei, Yushuo Guan <span class="h-index">h=9</span>, Yuanxing Zhang <span class="h-index">h=46</span>, Pengfei Wan <span class="h-index">h=21</span>, Fangcheng Fu <span class="h-index">h=18</span>, Wentao Zhang <span class="h-index">h=68</span>
+            <span class="h-badge">max h=106</span>
+          </div>
+          
+          
+            
+              
+            
+          
+            
+              
+            
+          
+            
+              
+            
+          
+            
+              
+            
+          
+            
+              
+            
+          
+            
+          
+            
+          
+            
+          
+            
+          
+            
+              
+            
+          
+            
+              
+            
+          
+            
+              
+            
+          
+            
+              
+            
+          
+            
+              
+            
+          
+            
+          
+            
+          
+            
+          
+            
+              
+            
+          
+            
+              
+            
+          
+            
+              
+            
+          
+            
+              
+            
+          
+          
+          <div class="author-affiliations">
+            <span class="affil-badge">School of AI, Shanghai Jiao Tong University; Kling Team, Kuaishou Technology</span><span class="affil-badge">Kling Team, Kuaishou Technology</span><span class="affil-badge">Peking University; Kling Team, Kuaishou Technology</span><span class="affil-badge">Peking University</span><span class="affil-badge">Renmin University of China</span><span class="affil-badge">HKUST</span><span class="affil-badge">Harbin University of Commerce</span><span class="affil-badge">Ministry of Education of the People's Republic of China</span><span class="affil-badge">Wuhan University</span><span class="affil-badge">South China Agricultural University</span><span class="affil-badge">TCA College</span><span class="affil-badge">Arab Open University</span><span class="affil-badge">Shanghai Jiao Tong University</span><span class="affil-badge">Southern University of Science and Technology</span>
+          </div>
+          
+        
+      </div>
+    </div>
+    
+    <div class="paper">
+      <div class="paper-title">
+        <a href="https://arxiv.org/abs/2605.21796v1" target="_blank">MM-Conv: A Multimodal Dataset and Benchmark for Context-Aware Grounding in 3D Dialogue</a>
+        <span class="score">9.0</span>
+        
+        
+      </div>
+      
+      <div class="summary">本文介绍了MM-Conv数据集和基准，用于评估多模态大模型在3D对话中的上下文感知 grounding 能力。</div>
+      <div class="tags">
+        
+        <span class="tag">multi-modal</span>
+        
+        <span class="tag">3D grounding</span>
+        
+        <span class="tag">dialogue</span>
+        
+      </div>
+      <div class="authors">
+        
+          <div class="author-names">
+            Anna Deichler <span class="h-index">h=4</span>, Jim O'Regan, Fethiye Irmak Dogan, Lubos Marcinek, Anna Klezovich <span class="h-index">h=1</span>, Iolanda Leite <span class="h-index">h=37</span>, Jonas Beskow <span class="h-index">h=34</span>
+            <span class="h-badge">max h=37</span>
+          </div>
+          
+          
+            
+          
+            
+          
+            
+          
+            
+          
+            
+          
+            
+              
+            
+          
+            
+          
+          
+          <div class="author-affiliations">
+            <span class="affil-badge">KTH Royal Institute of Technology</span>
+          </div>
+          
+        
+      </div>
+    </div>
+    
+    <div class="paper">
+      <div class="paper-title">
+        <a href="https://arxiv.org/abs/2605.21625v1" target="_blank">Flat-Pack Bench: Evaluating Spatio-Temporal Understanding in Large Vision-Language Models through Furniture Assembly</a>
+        <span class="score">9.0</span>
+        
+        
+      </div>
+      
+      <div class="summary">本文介绍Flat-Pack Bench，通过家具组装任务评估大视觉语言模型的时空理解能力。</div>
+      <div class="tags">
+        
+        <span class="tag">vision-language models</span>
+        
+        <span class="tag">spatio-temporal understanding</span>
+        
+        <span class="tag">benchmark</span>
+        
+      </div>
+      <div class="authors">
+        
+          <div class="author-names">
+            Aditya Chetan, Eric Cai, Peeyush Kushwaha, Bharath Raj Nagoor Kani, Utkarsh Mall, Qianqian Wang, Noah Snavely, Bharath Hariharan
+            
+          </div>
+          
+          
+            
+              
+            
+          
+            
+          
+            
+          
+            
+          
+            
+          
+            
+          
+            
+          
+            
+          
+          
+          <div class="author-affiliations">
+            <span class="affil-badge">Cornell University</span>
+          </div>
+          
+        
+      </div>
+    </div>
+    
+    <div class="paper">
+      <div class="paper-title">
+        <a href="https://arxiv.org/abs/2605.22679v1" target="_blank">Conceptualizing Embeddings: Sparse Disentanglement for Vision-Language Models</a>
+        <span class="score">8.0</span>
+        
+        
+      </div>
+      
+      <div class="summary">CEDAR提出一种后处理方法，通过自适应旋转实现概念嵌入的稀疏解缠，在不增加维度的情况下揭示视觉语言模型的组成结构。</div>
+      <div class="tags">
+        
+        <span class="tag">vision-language models</span>
+        
+        <span class="tag">interpretability</span>
+        
+        <span class="tag">sparse disentanglement</span>
+        
+        <span class="tag">embeddings</span>
+        
+      </div>
+      <div class="authors">
+        
+          <div class="author-names">
+            Piotr Kubaty, Patryk Marszałek, Łukasz Struski, Adam Wróbel, Jacek Tabor, Marek Śmieja
+            
+          </div>
+          
+          
+            
+              
+            
+          
+            
+          
+            
+              
+            
+          
+            
+          
+            
+              
+            
+          
+            
+          
+          
+          <div class="author-affiliations">
+            <span class="affil-badge">Faculty of Mathematics and Computer Science, Jagiellonian University, Kraków, Poland and Doctoral School of Exact and Natural Sciences, Jagiellonian University, Kraków, Poland</span><span class="affil-badge">Faculty of Mathematics and Computer Science, Jagiellonian University, Kraków, Poland</span><span class="affil-badge">Faculty of Mathematics and Computer Science, Jagiellonian University, Kraków, Poland and Centre for Credible AI, Warsaw University of Technology, Warsaw, Poland</span>
+          </div>
+          
+        
+      </div>
+    </div>
+    
+    <div class="paper">
+      <div class="paper-title">
+        <a href="https://arxiv.org/abs/2605.22651v1" target="_blank">What Does the Caption Really Say? Counterfactual Phrase Intervention for Compositional Data Selection in Vision-Language Pretraining</a>
+        <span class="score">8.0</span>
+        
+        
+      </div>
+      
+      <div class="summary">提出反事实短语干预框架，用于视觉语言预训练中的组成性数据选择，通过短语敏感性评分提升模型性能。</div>
+      <div class="tags">
+        
+        <span class="tag">vision-language pretraining</span>
+        
+        <span class="tag">data selection</span>
+        
+        <span class="tag">compositional generalization</span>
+        
+        <span class="tag">CLIP</span>
+        
+      </div>
+      <div class="authors">
+        
+          <div class="author-names">
+            Hyejin Go, Semi Lee, Hyesong Choi
+            
+          </div>
+          
+          
+            
+              
+            
+          
+            
+          
+            
+          
+          
+          <div class="author-affiliations">
+            <span class="affil-badge">Soongsil University Seoul, Republic of Korea</span>
+          </div>
+          
+        
+      </div>
+    </div>
+    
+    <div class="paper">
+      <div class="paper-title">
+        <a href="https://arxiv.org/abs/2605.22536v1" target="_blank">SpaceDG: Benchmarking Spatial Intelligence under Visual Degradation</a>
+        <span class="score">8.0</span>
+        
+        
+      </div>
+      
+      <div class="summary">提出一个大规模数据集，用于评估多模态大语言模型在视觉退化下的空间理解能力。</div>
+      <div class="tags">
+        
+        <span class="tag">spatial reasoning</span>
+        
+        <span class="tag">visual degradation</span>
+        
+        <span class="tag">multimodal large language models</span>
+        
+      </div>
+      <div class="authors">
+        
+          <div class="author-names">
+            Xiaolong Zhou, Yifei Liu, Ziyang Gong, Jiarui Li, Qiyue Zhao, Muyao Niu, Yuanyuan Gao, Le Ma, Xue Yang, Hongjie Zhang, Zhihang Zhong <span class="h-index">h=10</span>
+            <span class="h-badge">max h=10</span>
+          </div>
+          
+          
+            
+              
+            
+          
+            
+              
+            
+          
+            
+              
+            
+          
+            
+              
+            
+          
+            
+          
+            
+              
+            
+          
+            
+              
+            
+          
+            
+              
+            
+          
+            
+          
+            
+          
+            
+              
+            
+          
+          
+          <div class="author-affiliations">
+            <span class="affil-badge">Shanghai Artificial Intelligence Laboratory; University of Electronic Science and Technology of China</span><span class="affil-badge">Shanghai Artificial Intelligence Laboratory; Beihang University</span><span class="affil-badge">Shanghai Jiao Tong University</span><span class="affil-badge">Chongqing University</span><span class="affil-badge">The University of Tokyo</span><span class="affil-badge">Shanghai Artificial Intelligence Laboratory; Northwestern Polytechnical University</span><span class="affil-badge">Shanghai Artificial Intelligence Laboratory</span><span class="affil-badge">Beijing Academy of Artificial Intelligence</span>
+          </div>
+          
+        
+      </div>
+    </div>
+    
+    <div class="paper">
+      <div class="paper-title">
+        <a href="https://arxiv.org/abs/2605.22484v1" target="_blank">Supervised Classification Heads as Semantic Prototypes: Unlocking Vision-Language Alignment via Weight Recycling</a>
+        <span class="score">8.0</span>
+        
+        
+      </div>
+      
+      <div class="summary">利用预训练视觉模型的分类头作为语义原型，通过权重回收实现高效的视觉-语言对齐。</div>
+      <div class="tags">
+        
+        <span class="tag">vision-language models</span>
+        
+        <span class="tag">weight recycling</span>
+        
+        <span class="tag">zero-shot alignment</span>
+        
+      </div>
+      <div class="authors">
+        
+          <div class="author-names">
+            David Méndez <span class="h-index">h=6</span>, Roberto Confalonieri <span class="h-index">h=17</span>, Natalia Díaz Rodríguez
+            <span class="h-badge">max h=17</span>
+          </div>
+          
+          
+            
+              
+            
+          
+            
+              
+            
+          
+            
+          
+          
+          <div class="author-affiliations">
+            <span class="affil-badge">European Bioinformatics Institute</span><span class="affil-badge">University of Padua</span>
+          </div>
+          
+        
+      </div>
+    </div>
+    
+    <div class="paper">
+      <div class="paper-title">
+        <a href="https://arxiv.org/abs/2605.22446v1" target="_blank">Pre-VLA: Preemptive Runtime Verification for Reliable Vision-Language-Action and World-Model Rollouts</a>
+        <span class="score">8.0</span>
+        
+        
+      </div>
+      
+      <div class="summary">提出一个统一的运行时验证架构，用于在物理执行或世界模型想象前，对视觉-语言-动作模型进行抢先动作有效性评估。</div>
+      <div class="tags">
+        
+        <span class="tag">vision-language-action models</span>
+        
+        <span class="tag">runtime verification</span>
+        
+        <span class="tag">embodied AI</span>
+        
+      </div>
+      <div class="authors">
+        
+          <div class="author-names">
+            Zhen Sun <span class="h-index">h=36</span>, Yongjian Guo <span class="h-index">h=27</span>, Haoran Sun <span class="h-index">h=49</span>, Luqiao Wang <span class="h-index">h=16</span>, Wei Lu <span class="h-index">h=49</span>, Jiachi Ji <span class="h-index">h=1</span>, Shengzhe Ji <span class="h-index">h=6</span>, Junwu Xiong <span class="h-index">h=6</span>, Zhijun Meng <span class="h-index">h=15</span>
+            <span class="h-badge">max h=49</span>
+          </div>
+          
+          
+            
+          
+            
+              
+            
+          
+            
+              
+            
+          
+            
+              
+            
+          
+            
+              
+            
+          
+            
+              
+            
+          
+            
+              
+            
+          
+            
+              
+            
+          
+            
+              
+            
+          
+          
+          <div class="author-affiliations">
+            <span class="affil-badge">Guangdong University of Technology</span><span class="affil-badge">Chinese Academy of Sciences</span><span class="affil-badge">Kunming Medical University</span><span class="affil-badge">Guangxi University</span><span class="affil-badge">Beihang University</span><span class="affil-badge">Shandong Agricultural University</span><span class="affil-badge">South China Agricultural University</span><span class="affil-badge">North Sichuan Medical University</span>
+          </div>
+          
+        
+      </div>
+    </div>
+    
+    <div class="paper">
+      <div class="paper-title">
+        <a href="https://arxiv.org/abs/2605.22273v1" target="_blank">Exposing Vulnerabilities in Visible-Infrared VLMs: A Unified Geometric Adversarial Framework with Cross-Task Transferability</a>
+        <span class="score">8.0</span>
+        
+        
+      </div>
+      
+      <div class="summary">提出一种几何对抗补丁框架，用于攻击可见光-红外视觉语言模型，展示跨任务迁移性。</div>
+      <div class="tags">
+        
+        <span class="tag">adversarial attacks</span>
+        
+        <span class="tag">vision-language models</span>
+        
+        <span class="tag">multimodal</span>
+        
+        <span class="tag">robustness</span>
+        
+      </div>
+      <div class="authors">
+        
+          <div class="author-names">
+            Xiang Chen <span class="h-index">h=98</span>, Yuxian Dong, Chao Li <span class="h-index">h=62</span>, Chengyin Hu <span class="h-index">h=6</span>, Jiaju Han <span class="h-index">h=4</span>, Fengyu Zhang <span class="h-index">h=51</span>, Yiwei Wei <span class="h-index">h=11</span>, Jiahuan Long <span class="h-index">h=3</span>, Jiujiang Guo <span class="h-index">h=5</span>
+            <span class="h-badge">max h=98</span>
+          </div>
+          
+          
+            
+              
+            
+          
+            
+          
+            
+              
+            
+          
+            
+          
+            
+              
+            
+          
+            
+              
+            
+          
+            
+              
+            
+          
+            
+              
+            
+          
+            
+              
+            
+          
+          
+          <div class="author-affiliations">
+            <span class="affil-badge">Fujian University of Traditional Chinese Medicine</span><span class="affil-badge">Kunming University of Science and Technology</span><span class="affil-badge">Dalian Maritime University</span><span class="affil-badge">Shandong University</span><span class="affil-badge">Tianjin University</span><span class="affil-badge">Chinese People's Liberation Army</span><span class="affil-badge">Harbin University of Science and Technology</span>
+          </div>
+          
+        
+      </div>
+    </div>
+    
+    <div class="paper">
+      <div class="paper-title">
+        <a href="https://arxiv.org/abs/2605.22185v1" target="_blank">Enhancing Multimodal Large Language Models for Safety-Critical Driving Video Analysis</a>
+        <span class="score">8.0</span>
+        
+        
+      </div>
+      
+      <div class="summary">提出增强多模态大语言模型在安全关键驾驶视频分析中的能力，通过融合视频帧和遥测数据。</div>
+      <div class="tags">
+        
+        <span class="tag">multimodal LLM</span>
+        
+        <span class="tag">driving video</span>
+        
+        <span class="tag">safety-critical</span>
+        
+        <span class="tag">fusion</span>
+        
+      </div>
+      <div class="authors">
+        
+          <div class="author-names">
+            Tomaso Trinci, Henrique Piñeiro Monteagudo, Leonardo Taccari
+            
+          </div>
+          
+          
+            
+              
+            
+          
+            
+          
+            
+          
+          
+          <div class="author-affiliations">
+            <span class="affil-badge">Verizon Connect</span>
+          </div>
+          
+        
+      </div>
+    </div>
+    
+    <div class="paper">
+      <div class="paper-title">
+        <a href="https://arxiv.org/abs/2605.22158v1" target="_blank">ST-SimDiff: Balancing Spatiotemporal Similarity and Difference for Efficient Video Understanding with MLLMs</a>
+        <span class="score">8.0</span>
+        
+        
+      </div>
+      
+      <div class="summary">提出平衡时空相似性和差异性的框架，提高多模态大语言模型在视频理解中的效率。</div>
+      <div class="tags">
+        
+        <span class="tag">video understanding</span>
+        
+        <span class="tag">multimodal LLM</span>
+        
+        <span class="tag">token compression</span>
+        
+        <span class="tag">spatiotemporal</span>
+        
+      </div>
+      <div class="authors">
+        
+          <div class="author-names">
+            Bingjun Luo, Tony Wang, Chaoqi Chen, Xinpeng Ding
+            
+          </div>
+          
+          
+            
+              
+            
+          
+            
+          
+            
+              
+            
+          
+            
+              
+            
+          
+          
+          <div class="author-affiliations">
+            <span class="affil-badge">Tsinghua University</span><span class="affil-badge">Shenzhen University</span><span class="affil-badge">Xidian University</span>
+          </div>
+          
+        
+      </div>
+    </div>
+    
+    <div class="paper">
+      <div class="paper-title">
+        <a href="https://arxiv.org/abs/2605.22109v1" target="_blank">Perception or Prejudice: Can MLLMs Go Beyond First Impressions of Personality?</a>
+        <span class="score">8.0</span>
+        
+        
+      </div>
+      
+      <div class="summary">评估多模态大语言模型在人格感知中的能力，提出基于证据的理由推断任务。</div>
+      <div class="tags">
+        
+        <span class="tag">multimodal LLM</span>
+        
+        <span class="tag">personality perception</span>
+        
+        <span class="tag">reasoning</span>
+        
+        <span class="tag">evaluation</span>
+        
+      </div>
+      <div class="authors">
+        
+          <div class="author-names">
+            Caixin Kang, Tianyu Yan, Sitong Gong, Mingfang Zhang, Liangyang Ouyang, Ruicong Liu <span class="h-index">h=7</span>, Bo Zheng <span class="h-index">h=82</span>, Huchuan Lu <span class="h-index">h=105</span>, Kaipeng Zhang <span class="h-index">h=16</span>, Yoichi Sato <span class="h-index">h=61</span>, Yifei Huang <span class="h-index">h=25</span>
+            <span class="h-badge">max h=105</span>
+          </div>
+          
+          
+            
+              
+            
+          
+            
+              
+            
+          
+            
+          
+            
+              
+            
+          
+            
+          
+            
+              
+            
+          
+            
+              
+            
+          
+            
+              
+            
+          
+            
+              
+            
+          
+            
+              
+            
+          
+            
+              
+            
+          
+          
+          <div class="author-affiliations">
+            <span class="affil-badge">The University of Tokyo; Shanda AI Research Tokyo</span><span class="affil-badge">Shanda AI Research Tokyo; Dalian University of Technology</span><span class="affil-badge">The University of Tokyo</span><span class="affil-badge">Hubei University of Technology</span><span class="affil-badge">China Three Gorges University</span><span class="affil-badge">Ningbo University</span><span class="affil-badge">Xinjiang Production and Construction Corps</span><span class="affil-badge">Lawrence Livermore National Laboratory</span><span class="affil-badge">Xinjiang Medical University</span>
+          </div>
+          
+        
+      </div>
+    </div>
+    
+    <div class="paper">
+      <div class="paper-title">
+        <a href="https://arxiv.org/abs/2605.22098v1" target="_blank">TextTeacher: What Can Language Teach About Images?</a>
+        <span class="score">8.0</span>
+        
+        
+      </div>
+      
+      <div class="summary">提出TextTeacher，通过注入文本嵌入来提升图像分类训练的效果。</div>
+      <div class="tags">
+        
+        <span class="tag">multimodal</span>
+        
+        <span class="tag">image classification</span>
+        
+        <span class="tag">text embedding</span>
+        
+        <span class="tag">knowledge distillation</span>
+        
+      </div>
+      <div class="authors">
+        
+          <div class="author-names">
+            Tobias Christian Nauen, Stanislav Frolov, Brian Bernhard Moser, Federico Raue, Ahmed Anwar, Andreas Dengel
+            
+          </div>
+          
+          
+            
+              
+            
+          
+            
+              
+            
+          
+            
+          
+            
+          
+            
+              
+            
+          
+            
+          
+          
+          <div class="author-affiliations">
+            <span class="affil-badge">RPTU University Kaiserslautern-Landau; German Research Center for Artificial Intelligence (DFKI)</span><span class="affil-badge">German Research Center for Artificial Intelligence (DFKI)</span><span class="affil-badge">German Research Center for Artificial Intelligence (DFKI); RPTU University Kaiserslautern-Landau</span>
+          </div>
+          
+        
+      </div>
+    </div>
+    
+    <div class="paper">
+      <div class="paper-title">
+        <a href="https://arxiv.org/abs/2605.22089v1" target="_blank">LVDrive: Latent Visual Representation Enhanced Vision-Language-Action Autonomous Driving Model</a>
+        <span class="score">8.0</span>
+        
+        
+      </div>
+      
+      <div class="summary">提出LVDrive，通过潜在视觉表示增强视觉-语言-行动自动驾驶模型。</div>
+      <div class="tags">
+        
+        <span class="tag">autonomous driving</span>
+        
+        <span class="tag">vision-language-action</span>
+        
+        <span class="tag">multimodal</span>
+        
+        <span class="tag">latent representation</span>
+        
+      </div>
+      <div class="authors">
+        
+          <div class="author-names">
+            Xiaodong Mei, Diankun Zhang, Hongwei Xie, Guang Chen, Hangjun Ye, Dan Xu
+            
+          </div>
+          
+          
+            
+              
+            
+          
+            
+              
+            
+          
+            
+          
+            
+          
+            
+          
+            
+          
+          
+          <div class="author-affiliations">
+            <span class="affil-badge">The Hong Kong University of Science and Technology</span><span class="affil-badge">Xiaomi EV</span>
+          </div>
+          
+        
+      </div>
+    </div>
+    
+    <div class="paper">
+      <div class="paper-title">
+        <a href="https://arxiv.org/abs/2605.22080v1" target="_blank">JMed48k: A Multi-Profession Japanese Medical Licensing Benchmark for Vision-Language Model Evaluation</a>
+        <span class="score">8.0</span>
+        
+        
+      </div>
+      
+      <div class="summary">提出JMed48k，一个多职业日本医疗执照基准，用于评估视觉语言模型。</div>
+      <div class="tags">
+        
+        <span class="tag">vision-language models</span>
+        
+        <span class="tag">benchmark</span>
+        
+        <span class="tag">medical</span>
+        
+        <span class="tag">evaluation</span>
+        
+      </div>
+      <div class="authors">
+        
+          <div class="author-names">
+            Yue Xun, Junyu Liu, Qian Niu, Xinyi Wang, Zheng Yuan, Zirui Li, Zequn Zhang <span class="h-index">h=19</span>, Bowen Zhao <span class="h-index">h=12</span>, Shujun Wang <span class="h-index">h=58</span>, Irene Li <span class="h-index">h=18</span>, Kan Hatakeyama-Sato, Yusuke Iwasawa <span class="h-index">h=16</span>, Yutaka Matsuo <span class="h-index">h=65</span>
+            <span class="h-badge">max h=65</span>
+          </div>
+          
+          
+            
+              
+            
+          
+            
+              
+            
+          
+            
+              
+            
+          
+            
+          
+            
+          
+            
+              
+            
+          
+            
+              
+            
+          
+            
+              
+            
+          
+            
+              
+            
+          
+            
+          
+            
+          
+            
+          
+            
+              
+            
+          
+          
+          <div class="author-affiliations">
+            <span class="affil-badge">The Hong Kong Polytechnic University</span><span class="affil-badge">Kyoto University</span><span class="affil-badge">The University of Tokyo</span><span class="affil-badge">Hohai University</span><span class="affil-badge">Chinese Academy of Sciences</span><span class="affil-badge">Chinese Academy of Social Sciences</span><span class="affil-badge">Shenyang Agricultural University</span><span class="affil-badge">Nagoya University</span>
+          </div>
+          
+        
+      </div>
+    </div>
+    
+    <div class="paper">
+      <div class="paper-title">
+        <a href="https://arxiv.org/abs/2605.22078v1" target="_blank">Enhancing Visual Token Representations for Video Large Language Models via Training-Free Spatial-Temporal Pooling and Gridding</a>
+        <span class="score">8.0</span>
+        
+        
+      </div>
+      
+      <div class="summary">提出ST-GridPool，通过训练无关的时空池化和网格化增强视频大语言模型的视觉令牌表示。</div>
+      <div class="tags">
+        
+        <span class="tag">video LLM</span>
+        
+        <span class="tag">visual tokens</span>
+        
+        <span class="tag">spatiotemporal</span>
+        
+        <span class="tag">training-free</span>
+        
+      </div>
+      <div class="authors">
+        
+          <div class="author-names">
+            Bingjun Luo, Tony Wang, Hanqi Chen, Xinpeng Ding
+            
+          </div>
+          
+          
+            
+              
+            
+          
+            
+          
+            
+              
+            
+          
+            
+              
+            
+          
+          
+          <div class="author-affiliations">
+            <span class="affil-badge">Tsinghua University</span><span class="affil-badge">Shenzhen University</span><span class="affil-badge">Xidian University</span>
+          </div>
+          
+        
+      </div>
+    </div>
+    
+    <div class="paper">
+      <div class="paper-title">
+        <a href="https://arxiv.org/abs/2605.22072v1" target="_blank">Faithful-MR1: Faithful Multimodal Reasoning via Anchoring and Reinforcing Visual Attention</a>
+        <span class="score">8.0</span>
+        
+        
+      </div>
+      
+      <div class="summary">提出Faithful-MR1，通过锚定和强化视觉注意力来实现忠实的多模态推理。</div>
+      <div class="tags">
+        
+        <span class="tag">multimodal reasoning</span>
+        
+        <span class="tag">visual attention</span>
+        
+        <span class="tag">reinforcement learning</span>
+        
+        <span class="tag">faithfulness</span>
+        
+      </div>
+      <div class="authors">
+        
+          <div class="author-names">
+            Changyuan Tian <span class="h-index">h=5</span>, Zhicong Lu <span class="h-index">h=27</span>, Huaxing Liu <span class="h-index">h=13</span>, Xiang Wang <span class="h-index">h=50</span>, Shuai Li <span class="h-index">h=83</span>, Yu Chen <span class="h-index">h=139</span>, Wenqian Lv, Zichuan Lin <span class="h-index">h=9</span>, Juncheng Diao, Deheng Ye <span class="h-index">h=17</span>
+            <span class="h-badge">max h=139</span>
+          </div>
+          
+          
+            
+              
+            
+          
+            
+              
+            
+          
+            
+              
+            
+          
+            
+              
+            
+          
+            
+              
+            
+          
+            
+              
+            
+          
+            
+          
+            
+              
+            
+          
+            
+          
+            
+          
+          
+          <div class="author-affiliations">
+            <span class="affil-badge">Aerospace Information Research Institute</span><span class="affil-badge">George Mason University</span><span class="affil-badge">Qingdao University</span><span class="affil-badge">Beijing Institute of Technology</span><span class="affil-badge">Jiamusi University</span><span class="affil-badge">Dalhousie University</span><span class="affil-badge">Tencent (China)</span>
+          </div>
+          
+        
+      </div>
+    </div>
+    
+    <div class="paper">
+      <div class="paper-title">
+        <a href="https://arxiv.org/abs/2605.22732v1" target="_blank">Beyond Acoustic Emotion Recognition: Multimodal Pathos Analysis in Political Speech Using LLM-Based and Acoustic Emotion Models</a>
+        <span class="score">8.0</span>
+        
+        
+      </div>
+      
+      <div class="summary">利用基于LLM和声学情感模型的多模态路径分析政治演讲中的情感。</div>
+      <div class="tags">
+        
+        <span class="tag">multimodal analysis</span>
+        
+        <span class="tag">emotion recognition</span>
+        
+        <span class="tag">LLM</span>
+        
+        <span class="tag">political speech</span>
+        
+      </div>
+      <div class="authors">
+        
+          <div class="author-names">
+            Juergen Dietrich
+            
+          </div>
+          
+          
+            
+              
+            
+          
+          
+          <div class="author-affiliations">
+            <span class="affil-badge">Democracy Intelligence gGmbH, Germany</span>
+          </div>
+          
+        
+      </div>
+    </div>
+    
+    <div class="paper">
+      <div class="paper-title">
+        <a href="https://arxiv.org/abs/2605.22217v1" target="_blank">Survive or Collapse: The Asymmetric Roles of Data Gating and Reward Grounding in Self-Play RL</a>
+        <span class="score">8.0</span>
+        
+        
+      </div>
+      
+      <div class="summary">本文通过控制实验揭示了自玩强化学习中数据门控和奖励接地的不对称作用，指出严格的数据门控是维持稳定性的关键约束。</div>
+      <div class="tags">
+        
+        <span class="tag">self-play reinforcement learning</span>
+        
+        <span class="tag">LLM training</span>
+        
+        <span class="tag">stability</span>
+        
+        <span class="tag">data gating</span>
+        
+      </div>
+      <div class="authors">
+        
+          <div class="author-names">
+            Sophia Xiao Pu, Zhaotian Weng <span class="h-index">h=1</span>, Chengzhi Liu <span class="h-index">h=22</span>, Jayanth Srinivasa <span class="h-index">h=4</span>, Gaowen Liu <span class="h-index">h=24</span>, William Yang Wang <span class="h-index">h=65</span>, Xin Eric Wang <span class="h-index">h=7</span>
+            <span class="h-badge">max h=65</span>
+          </div>
+          
+          
+            
+          
+            
+          
+            
+          
+            
+              
+            
+          
+            
+              
+            
+          
+            
+              
+            
+          
+            
+          
+          
+          <div class="author-affiliations">
+            <span class="affil-badge">Cisco College</span><span class="affil-badge">Sinopec (China)</span><span class="affil-badge">Hong Kong Polytechnic University</span>
+          </div>
+          
+        
+      </div>
+    </div>
+    
+    <div class="paper">
+      <div class="paper-title">
+        <a href="https://arxiv.org/abs/2605.22074v1" target="_blank">From Reasoning Chains to Verifiable Subproblems: Curriculum Reinforcement Learning Enables Credit Assignment for LLM Reasoning</a>
+        <span class="score">8.0</span>
+        
+        
+      </div>
+      
+      <div class="summary">本文提出SCRL（子问题课程强化学习）框架，通过从推理链中导出可验证子问题并实施子问题级归一化，实现对复杂推理任务更精细的信用分配。</div>
+      <div class="tags">
+        
+        <span class="tag">reinforcement learning</span>
+        
+        <span class="tag">curriculum learning</span>
+        
+        <span class="tag">mathematical reasoning</span>
+        
+        <span class="tag">credit assignment</span>
+        
+      </div>
+      <div class="authors">
+        
+          <div class="author-names">
+            Xitai Jiang, Zihan Tang <span class="h-index">h=17</span>, Wenze Lin <span class="h-index">h=1</span>, Yang Yue <span class="h-index">h=31</span>, Shenzhi Wang <span class="h-index">h=8</span>, Gao Huang <span class="h-index">h=61</span>
+            <span class="h-badge">max h=61</span>
+          </div>
+          
+          
+            
+          
+            
+              
+            
+          
+            
+              
+            
+          
+            
+              
+            
+          
+            
+          
+            
+              
+            
+          
+          
+          <div class="author-affiliations">
+            <span class="affil-badge">Hunan University of Science and Technology</span><span class="affil-badge">Huaqiao University</span><span class="affil-badge">Xi'an Jiaotong University</span><span class="affil-badge">Wuhan College</span>
+          </div>
+          
+        
+      </div>
+    </div>
+    
+    <div class="paper">
+      <div class="paper-title">
+        <a href="https://arxiv.org/abs/2605.22035v1" target="_blank">HyLoVQA: Dynamic Hypernetwork-Generated Low-Rank Adaptation for Continual Visual Question Answering</a>
+        <span class="score">8.0</span>
+        
+        
+      </div>
+      
+      <div class="summary">本文提出HyLoVQA，用于持续视觉问答，它通过维护一个抗漂移的锚点记忆库，并利用超网络动态生成轻量级LoRA适配器，以实现高效且避免任务干扰的持续学习。</div>
+      <div class="tags">
+        
+        <span class="tag">continual learning</span>
+        
+        <span class="tag">visual question answering</span>
+        
+        <span class="tag">hypernetworks</span>
+        
+        <span class="tag">LoRA adapters</span>
+        
+      </div>
+      <div class="authors">
+        
+          <div class="author-names">
+            Yiran Wang, Chenyi Xiong, Ziyue Qin, Miao Zhang, Kui Xiao, Zhifei Li
+            
+          </div>
+          
+          
+            
+              
+            
+          
+            
+          
+            
+          
+            
+          
+            
+          
+            
+          
+          
+          <div class="author-affiliations">
+            <span class="affil-badge">Zhifei Li1,2,31School of Computer Science, Hubei University, Wuhan 430062, China2Hubei Key Laboratory of Big Data Intelligent Analysis and Application (Hubei University), Wuhan 430062, China3Key Laboratory of Intelligent Sensing System and Security (Hubei University), Ministry of Education, Wuhan 430062, China{yiranwang, xiongchenyi, qinziyue}@stu.hubu.edu.cn,
+{zhangmiao, xiaokui, zhifei1993}@hubu.edu.cnCorresponding author.</span>
+          </div>
+          
+        
+      </div>
+    </div>
+    
+    <div class="paper">
+      <div class="paper-title">
+        <a href="https://arxiv.org/abs/2605.21728v1" target="_blank">BEiTScore: Reference-free Image Captioning Evaluation with an Efficient Cross-Encoder Model</a>
+        <span class="score">8.0</span>
+        
+        
+      </div>
+      
+      <div class="summary">本文提出BEiTScore，一种高效的跨编码器模型，用于无参考图像描述评估。</div>
+      <div class="tags">
+        
+        <span class="tag">image captioning</span>
+        
+        <span class="tag">evaluation metric</span>
+        
+        <span class="tag">cross-encoder</span>
+        
+      </div>
+      <div class="authors">
+        
+          <div class="author-names">
+            Gonçalo Gomes <span class="h-index">h=5</span>, Bruno Martins <span class="h-index">h=31</span>, Chrysoula Zerva <span class="h-index">h=9</span>
+            <span class="h-badge">max h=31</span>
+          </div>
+          
+          
+            
+              
+            
+          
+            
+              
+            
+          
+            
+              
+            
+          
+          
+          <div class="author-affiliations">
+            <span class="affil-badge">University of Aveiro</span><span class="affil-badge">Instituto de Engenharia de Sistemas e Computadores Investigação e Desenvolvimento</span><span class="affil-badge">Institute of Spring Technology</span>
+          </div>
+          
+        
+      </div>
+    </div>
+    
+    <div class="paper">
+      <div class="paper-title">
+        <a href="https://arxiv.org/abs/2605.22658v1" target="_blank">SegCompass: Exploring Interpretable Alignment with Sparse Autoencoders for Enhanced Reasoning Segmentation</a>
+        <span class="score">7.0</span>
+        
+        
+      </div>
+      
+      <div class="summary">SegCompass利用稀疏自编码器构建可解释的对齐路径，将语言推理与视觉感知连接起来，增强推理分割性能。</div>
+      <div class="tags">
+        
+        <span class="tag">reasoning segmentation</span>
+        
+        <span class="tag">interpretable alignment</span>
+        
+        <span class="tag">sparse autoencoder</span>
+        
+        <span class="tag">multimodal</span>
+        
+      </div>
+      <div class="authors">
+        
+          <div class="author-names">
+            Zhenyu Lu, Liupeng Li, Jinpeng Wang, Haoqian Kang, Yan Feng, Ke Chen, Yaowei Wang
+            
+          </div>
+          
+          
+            
+              
+            
+          
+            
+              
+            
+          
+            
+              
+            
+          
+            
+              
+            
+          
+            
+              
+            
+          
+            
+              
+            
+          
+            
+          
+          
+          <div class="author-affiliations">
+            <span class="affil-badge">Shenzhen Institutes of Advanced Technology, Chinese Academy of Sciences; Peng Cheng Laboratory; University of Chinese Academy of Sciences</span><span class="affil-badge">Harbin Institute of Technology, Shenzhen; Peng Cheng Laboratory</span><span class="affil-badge">Harbin Institute of Technology, Shenzhen</span><span class="affil-badge">College of Computer Science and Technology, Jilin University; Harbin Institute of Technology, Shenzhen</span><span class="affil-badge">Meituan, Beijing</span><span class="affil-badge">Peng Cheng Laboratory</span>
+          </div>
+          
+        
+      </div>
+    </div>
+    
+    <div class="paper">
+      <div class="paper-title">
+        <a href="https://arxiv.org/abs/2605.22570v1" target="_blank">VGenST-Bench: A Benchmark for Spatio-Temporal Reasoning via Active Video Synthesis</a>
+        <span class="score">7.0</span>
+        
+        
+      </div>
+      
+      <div class="summary">提出VGenST-Bench，一个通过主动视频合成构建的基准，用于评估多模态大模型的时空推理能力。</div>
+      <div class="tags">
+        
+        <span class="tag">benchmark</span>
+        
+        <span class="tag">spatio-temporal reasoning</span>
+        
+        <span class="tag">video synthesis</span>
+        
+        <span class="tag">MLLMs</span>
+        
+      </div>
+      <div class="authors">
+        
+          <div class="author-names">
+            Jinho Park, Youbin Kim, Hogun Park, Eunbyung Park
+            
+          </div>
+          
+          
+            
+              
+            
+          
+            
+          
+            
+          
+            
+              
+            
+          
+          
+          <div class="author-affiliations">
+            <span class="affil-badge">Department of Artificial Intelligence, Sungkyunkwan University</span><span class="affil-badge">Department of Artificial Intelligence, Yonsei University</span>
+          </div>
+          
+        
+      </div>
+    </div>
+    
+    <div class="paper">
+      <div class="paper-title">
+        <a href="https://arxiv.org/abs/2605.22413v1" target="_blank">From Recognition to Reasoning: Benchmarking and Enhancing MLLMs on Real-World Receipt Document Understanding</a>
+        <span class="score">7.0</span>
+        
+        
+      </div>
+      
+      <div class="summary">提出ReceiptBench基准，用于评估多模态大语言模型在收据文档理解中的能力，并提出一种基于强化学习的训练框架。</div>
+      <div class="tags">
+        
+        <span class="tag">document understanding</span>
+        
+        <span class="tag">multimodal large language models</span>
+        
+        <span class="tag">visual information extraction</span>
+        
+      </div>
+      <div class="authors">
+        
+          <div class="author-names">
+            Yandi Wang, Libin Zhan, Ziwei Huang, Tiancheng Luo, Yuxuan Jiang, Wang Dong, Leilei Gan, Jun Chen
+            
+          </div>
+          
+          
+            
+              
+            
+          
+            
+          
+            
+          
+            
+          
+            
+          
+            
+          
+            
+          
+            
+          
+          
+          <div class="author-affiliations">
+            <span class="affil-badge">Zhejiang University, China</span>
+          </div>
+          
+        
+      </div>
+    </div>
+    
+    <div class="paper">
+      <div class="paper-title">
+        <a href="https://arxiv.org/abs/2605.22791v1" target="_blank">Gated DeltaNet-2: Decoupling Erase and Write in Linear Attention</a>
+        <span class="score">7.0</span>
+        
+        
+      </div>
+      
+      <div class="summary">提出了Gated DeltaNet-2，通过解耦擦除和写入改进线性注意力机制，提升效率。</div>
+      <div class="tags">
+        
+        <span class="tag">linear attention</span>
+        
+        <span class="tag">transformer</span>
+        
+        <span class="tag">efficiency</span>
+        
+        <span class="tag">large language models</span>
+        
+      </div>
+      <div class="authors">
+        
+          <div class="author-names">
+            Ali Hatamizadeh, Yejin Choi, Jan Kautz
+            
+          </div>
+          
+          
+            
+              
+            
+          
+            
+          
+            
+          
+          
+          <div class="author-affiliations">
+            <span class="affil-badge">NVIDIA</span>
+          </div>
+          
+        
+      </div>
+    </div>
+    
+    <div class="paper">
+      <div class="paper-title">
+        <a href="https://arxiv.org/abs/2605.22620v1" target="_blank">Two is better than one: A Collapse-free Multi-Reward RLIF Training Framework</a>
+        <span class="score">7.0</span>
+        
+        
+      </div>
+      
+      <div class="summary">本文提出一种多奖励的强化学习内部反馈（RLIF）框架，通过分解训练信号和引入正则化来稳定和提升LLM在数学推理和代码生成上的无监督训练效果。</div>
+      <div class="tags">
+        
+        <span class="tag">reinforcement learning</span>
+        
+        <span class="tag">LLM training</span>
+        
+        <span class="tag">reasoning</span>
+        
+        <span class="tag">unsupervised learning</span>
+        
+      </div>
+      <div class="authors">
+        
+          <div class="author-names">
+            Shourov Joarder, Diganta Sikdar, Ahsan Habib Akash, Binod Bhattarai, Prashnna Gyawali
+            
+          </div>
+          
+          
+            
+              
+            
+          
+            
+          
+            
+              
+            
+          
+            
+              
+            
+          
+            
+          
+          
+          <div class="author-affiliations">
+            <span class="affil-badge">Bangladesh University of Engineering and Technology</span><span class="affil-badge">West Virginia University</span><span class="affil-badge">University of Aberdeen, Fogsphere, University College London</span>
+          </div>
+          
+        
+      </div>
+    </div>
+    
+    <div class="paper">
+      <div class="paper-title">
+        <a href="https://arxiv.org/abs/2605.22567v1" target="_blank">LANG: Reinforcement Learning for Multilingual Reasoning with Language-Adaptive Hint Guidance</a>
+        <span class="score">7.0</span>
+        
+        
+      </div>
+      
+      <div class="summary">本文提出LANG框架，利用语言条件提示和渐进式衰减策略来引导强化学习，从而在不牺牲语言一致性的情况下增强LLM的多语言数学推理能力。</div>
+      <div class="tags">
+        
+        <span class="tag">multilingual</span>
+        
+        <span class="tag">reinforcement learning</span>
+        
+        <span class="tag">reasoning</span>
+        
+        <span class="tag">language consistency</span>
+        
+      </div>
+      <div class="authors">
+        
+          <div class="author-names">
+            Yuchun Fan <span class="h-index">h=3</span>, Bei Li <span class="h-index">h=57</span>, Peiguang Li <span class="h-index">h=17</span>, Yilin Wang <span class="h-index">h=73</span>, Yongyu Mu <span class="h-index">h=4</span>, Jian Yang <span class="h-index">h=132</span>, Xin Chen <span class="h-index">h=57</span>, Rongxiang Weng <span class="h-index">h=12</span>, Jingang Wang <span class="h-index">h=37</span>, Xunliang Cai <span class="h-index">h=8</span>, Jingbo Zhu <span class="h-index">h=23</span>, Tong Xiao <span class="h-index">h=36</span>
+            <span class="h-badge">max h=132</span>
+          </div>
+          
+          
+            
+              
+            
+          
+            
+              
+            
+          
+            
+              
+            
+          
+            
+              
+            
+          
+            
+          
+            
+              
+            
+          
+            
+              
+            
+          
+            
+          
+            
+              
+            
+          
+            
+              
+            
+          
+            
+          
+            
+              
+            
+          
+          
+          <div class="author-affiliations">
+            <span class="affil-badge">Northeastern University</span><span class="affil-badge">Harbin Medical University</span><span class="affil-badge">Chinese Academy of Sciences</span><span class="affil-badge">Hunan University of Arts and Science</span><span class="affil-badge">Nanyang Technological University</span><span class="affil-badge">Guangzhou Medical University</span><span class="affil-badge">Shenyang Aerospace University</span><span class="affil-badge">Meizu (China)</span><span class="affil-badge">Beijing University of Posts and Telecommunications</span>
+          </div>
+          
+        
+      </div>
+    </div>
+    
+    <div class="paper">
+      <div class="paper-title">
+        <a href="https://arxiv.org/abs/2605.22487v1" target="_blank">Polite on the Surface, Wrong in Practice: A Curated Dataset for Fixing Honorific Failures in Multilingual Bangla Generation</a>
+        <span class="score">7.0</span>
+        
+        
+      </div>
+      
+      <div class="summary">本文针对孟加拉语对话中敬语失败的问题，构建了一个文化对齐的微调数据集BLADE，并展示了其在提升开源模型结构保真度和敬语对齐方面的有效性。</div>
+      <div class="tags">
+        
+        <span class="tag">low-resource language</span>
+        
+        <span class="tag">instruction tuning</span>
+        
+        <span class="tag">cultural alignment</span>
+        
+        <span class="tag">pragmatics</span>
+        
+      </div>
+      <div class="authors">
+        
+          <div class="author-names">
+            Md. Asaduzzaman Shuvo, Mahedi Hasan, Md. Tashin Parvez, Azizul Haque Noman, Md. Shafayet Hossain Ovi
+            
+          </div>
+          
+          
+            
+              
+            
+          
+            
+          
+            
+          
+            
+          
+            
+          
+          
+          <div class="author-affiliations">
+            <span class="affil-badge">United International University, Bangladesh</span>
+          </div>
+          
+        
+      </div>
+    </div>
+    
+    <div class="paper">
+      <div class="paper-title">
+        <a href="https://arxiv.org/abs/2605.22389v1" target="_blank">Unified Data Selection for LLM Reasoning</a>
+        <span class="score">7.0</span>
+        
+        
+      </div>
+      
+      <div class="summary">本文提出高熵和（HES）指标，这是一种免训练的数据质量评估方法，可统一用于监督微调、拒绝微调和强化学习范式，以高效选择高质量的推理数据。</div>
+      <div class="tags">
+        
+        <span class="tag">data selection</span>
+        
+        <span class="tag">LLM training</span>
+        
+        <span class="tag">reasoning</span>
+        
+        <span class="tag">entropy</span>
+        
+      </div>
+      <div class="authors">
+        
+          <div class="author-names">
+            Xiaoyuan Li, Yubo Ma, Chengpeng Li, Fengbin Zhu, Yiyao Yu, Keqin Bao <span class="h-index">h=12</span>, Wenjie Wang <span class="h-index">h=40</span>, Fuli Feng <span class="h-index">h=46</span>, Dayiheng Liu <span class="h-index">h=23</span>
+            <span class="h-badge">max h=46</span>
+          </div>
+          
+          
+            
+              
+            
+          
+            
+              
+            
+          
+            
+          
+            
+              
+            
+          
+            
+          
+            
+          
+            
+              
+            
+          
+            
+          
+            
+              
+            
+          
+          
+          <div class="author-affiliations">
+            <span class="affil-badge">University of Science and Technology of China</span><span class="affil-badge">Alibaba Group</span><span class="affil-badge">National University of Singapore</span><span class="affil-badge">Xi'an University of Architecture and Technology</span><span class="affil-badge">Alibaba Group (Cayman Islands)</span>
+          </div>
+          
+        
+      </div>
+    </div>
+    
+  </div>
+  
+  <div class="category" id="cat-5">
+    <h2>底层视觉 (12)</h2>
+    
+    <div class="paper">
+      <div class="paper-title">
+        <a href="https://arxiv.org/abs/2605.22423v1" target="_blank">Moment-Reenacting: Inverse Motion Degradation with Cross-shutter Guidance</a>
+        <span class="score">9.0</span>
+        
+        
+      </div>
+      
+      <div class="summary">提出一个统一框架，通过利用全局快门模糊和滚动快门失真的互补特性，联合反转运动退化并重演成像时刻。</div>
+      <div class="tags">
+        
+        <span class="tag">motion blur</span>
+        
+        <span class="tag">rolling shutter</span>
+        
+        <span class="tag">video reconstruction</span>
+        
+      </div>
+      <div class="authors">
+        
+          <div class="author-names">
+            Ji Xiang, Lin Guixu, Yin Zhengwei, Zhao Jiancheng, Zheng Yinqiang
+            
+          </div>
+          
+          
+            
+          
+            
+          
+            
+              
+            
+          
+            
+          
+            
+          
+          
+          <div class="author-affiliations">
+            <span class="affil-badge">Graduate School of Information Science and Technology</span>
+          </div>
+          
+        
+      </div>
+    </div>
+    
+    <div class="paper">
+      <div class="paper-title">
+        <a href="https://arxiv.org/abs/2605.22351v1" target="_blank">QuantSR+: Pushing the Limit of Quantized Image Super-Resolution Networks</a>
+        <span class="score">9.0</span>
+        
+        
+      </div>
+      
+      <div class="summary">提出QuantSR+框架，通过改进量化算子、网络设计和训练优化，提升低比特图像超分辨率模型的性能。</div>
+      <div class="tags">
+        
+        <span class="tag">image super-resolution</span>
+        
+        <span class="tag">model quantization</span>
+        
+        <span class="tag">efficiency</span>
+        
+      </div>
+      <div class="authors">
+        
+          <div class="author-names">
+            Haotong Qin, Xudong Ma, Xianglong Liu, Jie Luo, Jinyang Guo, Michele Magno, Yulun Zhang
+            
+          </div>
+          
+          
+            
+              
+            
+          
+            
+              
+            
+          
+            
+          
+            
+          
+            
+          
+            
+          
+            
+              
+            
+          
+          
+          <div class="author-affiliations">
+            <span class="affil-badge">ETH Zurich, Switzerland</span><span class="affil-badge">Beihang University, China</span><span class="affil-badge">Shanghai Jiao Tong University, China</span>
+          </div>
+          
+        
+      </div>
+    </div>
+    
+    <div class="paper">
+      <div class="paper-title">
+        <a href="https://arxiv.org/abs/2605.22208v1" target="_blank">EvoIR-Agent: Self-Evolving Image Restoration Agentic System via Experience-Driven Learning</a>
+        <span class="score">9.0</span>
+        
+        
+      </div>
+      
+      <div class="summary">提出一种基于代理的自进化图像修复系统，通过层次化经验池提高性能和效率。</div>
+      <div class="tags">
+        
+        <span class="tag">image restoration</span>
+        
+        <span class="tag">AI agent</span>
+        
+        <span class="tag">multimodal LLM</span>
+        
+        <span class="tag">experience learning</span>
+        
+      </div>
+      <div class="authors">
+        
+          <div class="author-names">
+            Kailin Zhuang <span class="h-index">h=5</span>, Jiawei Wu <span class="h-index">h=56</span>, Zhi Jin <span class="h-index">h=45</span>
+            <span class="h-badge">max h=56</span>
+          </div>
+          
+          
+            
+              
+            
+          
+            
+              
+            
+          
+            
+              
+            
+          
+          
+          <div class="author-affiliations">
+            <span class="affil-badge">University of California, Berkeley</span><span class="affil-badge">Beijing University of Chinese Medicine</span><span class="affil-badge">Anhui University</span>
+          </div>
+          
+        
+      </div>
+    </div>
+    
+    <div class="paper">
+      <div class="paper-title">
+        <a href="https://arxiv.org/abs/2605.22186v1" target="_blank">Event-Illumination Collaborative Low-light Image Enhancement with a High-resolution Real-world Dataset</a>
+        <span class="score">9.0</span>
+        
+        
+      </div>
+      
+      <div class="summary">提出事件-光照协同的低光图像增强框架，并发布高分辨率真实数据集。</div>
+      <div class="tags">
+        
+        <span class="tag">image enhancement</span>
+        
+        <span class="tag">low-light</span>
+        
+        <span class="tag">event cameras</span>
+        
+        <span class="tag">real-world dataset</span>
+        
+      </div>
+      <div class="authors">
+        
+          <div class="author-names">
+            Senyan Xu, Zhijing Sun, Kean Liu, Xin Lu, Ruixuan Jiang, Mingyang Huang, Xueyang Fu, Zheng-Jun Zha
+            
+          </div>
+          
+          
+            
+              
+            
+          
+            
+          
+            
+          
+            
+          
+            
+          
+            
+          
+            
+          
+            
+          
+          
+          <div class="author-affiliations">
+            <span class="affil-badge">University of Science and Technology of China</span>
+          </div>
+          
+        
+      </div>
+    </div>
+    
+    <div class="paper">
+      <div class="paper-title">
+        <a href="https://arxiv.org/abs/2605.22147v1" target="_blank">Flow-based Gaussian Splatting for Continuous-Scale Remote Sensing Image Super-Resolution</a>
+        <span class="score">9.0</span>
+        
+        
+      </div>
+      
+      <div class="summary">提出基于流和高斯溅射的连续尺度遥感图像超分辨率方法。</div>
+      <div class="tags">
+        
+        <span class="tag">super-resolution</span>
+        
+        <span class="tag">remote sensing</span>
+        
+        <span class="tag">flow matching</span>
+        
+        <span class="tag">Gaussian splatting</span>
+        
+      </div>
+      <div class="authors">
+        
+          <div class="author-names">
+            Jiangwei Mo, Xi Lu, Hanlin Wu
+            
+          </div>
+          
+          
+            
+              
+            
+          
+            
+          
+            
+          
+          
+          <div class="author-affiliations">
+            <span class="affil-badge">School of Information Science and Technology, Beijing Foreign Studies University, Beijing 100089, China</span>
+          </div>
+          
+        
+      </div>
+    </div>
+    
+    <div class="paper">
+      <div class="paper-title">
+        <a href="https://arxiv.org/abs/2605.22104v1" target="_blank">OPERA: An Agent for Image Restoration with End-to-End Joint Planning-Execution Optimization</a>
+        <span class="score">9.0</span>
+        
+        
+      </div>
+      
+      <div class="summary">提出OPERA，一种端到端联合规划-执行优化的图像修复代理框架。</div>
+      <div class="tags">
+        
+        <span class="tag">image restoration</span>
+        
+        <span class="tag">AI agent</span>
+        
+        <span class="tag">reinforcement learning</span>
+        
+        <span class="tag">planning</span>
+        
+      </div>
+      <div class="authors">
+        
+          <div class="author-names">
+            Feng Zhu, Shuyang Xie, Yihan Zeng, Ming Liu, Wangmeng Zuo
+            
+          </div>
+          
+          
+            
+              
+            
+          
+            
+          
+            
+              
+            
+          
+            
+          
+            
+          
+          
+          <div class="author-affiliations">
+            <span class="affil-badge">Harbin Institute of Technology</span><span class="affil-badge">Huawei Noah's Ark Lab</span>
+          </div>
+          
+        
+      </div>
+    </div>
+    
+    <div class="paper">
+      <div class="paper-title">
+        <a href="https://arxiv.org/abs/2605.21671v1" target="_blank">HyperBench: Standardizing and Scaling Synthetic Evaluation for Hyperspectral Super-Resolution</a>
+        <span class="score">9.0</span>
+        
+        
+      </div>
+      
+      <div class="summary">提出了HyperBench，一个标准化超光谱超分辨率合成评估框架，用于统一和可扩展的评估。</div>
+      <div class="tags">
+        
+        <span class="tag">hyperspectral</span>
+        
+        <span class="tag">super-resolution</span>
+        
+        <span class="tag">evaluation</span>
+        
+        <span class="tag">benchmark</span>
+        
+      </div>
+      <div class="authors">
+        
+          <div class="author-names">
+            Ritik Shah, Marco F. Duarte
+            
+          </div>
+          
+          
+            
+              
+            
+          
+            
+          
+          
+          <div class="author-affiliations">
+            <span class="affil-badge">Ritik ShahUniversity of MassachusettsAmherst, MA 01003rgshah@umass.edu</span>
+          </div>
+          
+        
+      </div>
+    </div>
+    
+    <div class="paper">
+      <div class="paper-title">
+        <a href="https://www.semanticscholar.org/paper/e96230f340ebfd85f2c8d7c93ded00987f40d2cc" target="_blank">Conditional Diffusion Model Optimization for Real-Time Point-of-Care Image-Quality Enhancement on Nvidia Jetson Orin Nano</a>
+        <span class="score">9.0</span>
+        <span class="venue">IEEE International Symposium on Biomedical Imaging</span>
+        
+      </div>
+      
+      <div class="summary">本文提出条件扩散模型优化，用于在Nvidia Jetson Orin Nano上实现实时医疗图像质量增强。</div>
+      <div class="tags">
+        
+        <span class="tag">diffusion models</span>
+        
+        <span class="tag">image enhancement</span>
+        
+        <span class="tag">embedded deployment</span>
+        
+      </div>
+      <div class="authors">
+        
+          Tharun Kumar Jayaprakash, Ye Tian, Jedrzej Golebka, Royce W. S. Chen, Yu Gan, Kaveri A. Thakoor
+        
+      </div>
+    </div>
+    
+    <div class="paper">
+      <div class="paper-title">
+        <a href="https://arxiv.org/abs/2605.22572v1" target="_blank">SegGuidedNet: Sub-Region-Aware Attention Supervision for Interpretable Brain Tumor Segmentation</a>
+        <span class="score">8.0</span>
+        
+        
+      </div>
+      
+      <div class="summary">提出SegGuidedNet，通过子区域感知注意力监督，实现可解释的脑肿瘤分割，增强解码器对肿瘤子区域的判别能力。</div>
+      <div class="tags">
+        
+        <span class="tag">image segmentation</span>
+        
+        <span class="tag">brain tumor</span>
+        
+        <span class="tag">interpretability</span>
+        
+        <span class="tag">3D CNN</span>
+        
+      </div>
+      <div class="authors">
+        
+          <div class="author-names">
+            Hasaan Maqsood, Saif Ur Rehman Khan <span class="h-index">h=26</span>, Sebastian Vollmer <span class="h-index">h=2</span>, Andreas Dengel <span class="h-index">h=56</span>, Muhammad Nabeel Asim <span class="h-index">h=19</span>
+            <span class="h-badge">max h=56</span>
+          </div>
+          
+          
+            
+          
+            
+              
+            
+          
+            
+              
+            
+          
+            
+              
+            
+          
+            
+          
+          
+          <div class="author-affiliations">
+            <span class="affil-badge">Central South University</span><span class="affil-badge">German Research Centre for Artificial Intelligence</span><span class="affil-badge">University of Kaiserslautern</span>
+          </div>
+          
+        
+      </div>
+    </div>
+    
+    <div class="paper">
+      <div class="paper-title">
+        <a href="https://arxiv.org/abs/2605.22126v1" target="_blank">AesFormer: Transform Everyday Photos into Beautiful Memories</a>
+        <span class="score">8.0</span>
+        
+        
+      </div>
+      
+      <div class="summary">提出AesFormer框架，通过结构重建提升日常照片的美学质量。</div>
+      <div class="tags">
+        
+        <span class="tag">image enhancement</span>
+        
+        <span class="tag">aesthetic</span>
+        
+        <span class="tag">photo reconstruction</span>
+        
+        <span class="tag">editing</span>
+        
+      </div>
+      <div class="authors">
+        
+          <div class="author-names">
+            Tianxiang Du <span class="h-index">h=12</span>, Hulingxiao He <span class="h-index">h=2</span>, Yuxin Peng <span class="h-index">h=46</span>
+            <span class="h-badge">max h=46</span>
+          </div>
+          
+          
+            
+              
+            
+          
+            
+              
+            
+          
+            
+              
+            
+          
+          
+          <div class="author-affiliations">
+            <span class="affil-badge">Dalian University of Technology</span><span class="affil-badge">King University</span><span class="affil-badge">Guiyang College of Traditional Chinese Medicine</span>
+          </div>
+          
+        
+      </div>
+    </div>
+    
+    <div class="paper">
+      <div class="paper-title">
+        <a href="https://arxiv.org/abs/2605.21096v1" target="_blank">Joint Alignment and Denoising for Event-Based Vision Sensors Using Regret-based Pareto Optimization</a>
+        <span class="score">8.0</span>
+        
+        
+      </div>
+      
+      <div class="summary">提出了一种基于遗憾帕累托优化的事件视觉传感器联合对齐与去噪方法。</div>
+      <div class="tags">
+        
+        <span class="tag">event-based vision</span>
+        
+        <span class="tag">denoising</span>
+        
+        <span class="tag">alignment</span>
+        
+        <span class="tag">Pareto optimization</span>
+        
+      </div>
+      <div class="authors">
+        
+          <div class="author-names">
+            Shimpei Harada, Junya Hara, Hiroshi Higashi, Yuichi Tanaka
+            
+          </div>
+          
+          
+            
+              
+            
+          
+            
+          
+            
+          
+            
+          
+          
+          <div class="author-affiliations">
+            <span class="affil-badge">Graduate School of Engineering, The University of Osaka</span>
+          </div>
+          
+        
+      </div>
+    </div>
+    
+    <div class="paper">
+      <div class="paper-title">
+        <a href="https://arxiv.org/abs/2605.22121v1" target="_blank">MotionDPS: Motion-Compensated 3D Brain MRI Reconstruction</a>
+        <span class="score">7.0</span>
+        
+        
+      </div>
+      
+      <div class="summary">提出运动补偿的3D脑部MRI重建框架，结合扩散模型和物理模型。</div>
+      <div class="tags">
+        
+        <span class="tag">MRI reconstruction</span>
+        
+        <span class="tag">diffusion models</span>
+        
+        <span class="tag">motion compensation</span>
+        
+        <span class="tag">medical imaging</span>
+        
+      </div>
+      <div class="authors">
+        
+          <div class="author-names">
+            Antonio Ortiz-Gonzalez, Erich Kobler, Lukas Schletter, Alexander Effland
+            
+          </div>
+          
+          
+            
+              
+            
+          
+            
+          
+            
+          
+            
+          
+          
+          <div class="author-affiliations">
+            <span class="affil-badge">Lukas Schletter and Alexander EfflandAO is with the Life and Medical Sciences Institute, University of Bonn, Bonn, Germany (e-mail: aortizgo@uni-bonn.de).EK is with the Institute for Machine Learning, LIT AI Lab, Department of Virtual Morphology, Clinical Research Institute Medical AI, Johannes Kepler University Linz, Linz, Austria (e-mail: erich.kobler@jku.at).LS is with the
+German Center for Neurodegenerative Diseases (DZNE), Bonn, Germany (e-mail:
+Lukas.Schletter@dzne.de).AE is with the Institute for Applied Mathematics, University of Bonn, Bonn, Germany (e-mail: effland@iam.uni-bonn.de).AO, LS, and AE acknowledge funding by the German Research Foundation (DFG) Grants EXC2151‐390873048 and EXC‐2047/1‐390685813.
+EK acknowledges funding from the DFG within the SPP2298 under project 543939932 and from the Austrian Science Fund (FWF) project number 10.55776/COE12.∗A. Ortiz-Gonzalez and E. Kobler share first authorship.</span>
+          </div>
+          
+        
+      </div>
+    </div>
+    
+  </div>
+  
+</main>
+</div>
+
+<script>
+(function() {
+  var sections = document.querySelectorAll('.category, .summary-section');
+  var links = document.querySelectorAll('.sidebar-nav a');
+  if (!sections.length || !links.length) return;
+
+  var observer = new IntersectionObserver(function(entries) {
+    entries.forEach(function(entry) {
+      if (entry.isIntersecting) {
+        links.forEach(function(l) { l.classList.remove('active'); });
+        var id = entry.target.id;
+        var active = document.querySelector('.sidebar-nav a[href="#' + id + '"]');
+        if (active) active.classList.add('active');
+      }
+    });
+  }, { rootMargin: '-20% 0px -60% 0px' });
+
+  sections.forEach(function(s) { observer.observe(s); });
+})();
+</script>
+</body>
+</html>
