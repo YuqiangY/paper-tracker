@@ -20,6 +20,11 @@ python main.py fetch      # fetch + dedup only
 python main.py filter     # keyword + LLM filter on today's raw data
 python main.py output     # regenerate HTML/Feishu from today's data
 
+# One-shot CVPR conference sweep (independent of the daily flow; does NOT touch
+# the daily DB, daily JSON, or site index). Outputs to cvpr{year} namespace.
+python main.py cvpr              # full sweep of CVPR accepted papers
+python main.py cvpr --limit 30   # smoke test on first 30 papers
+
 # Run tests
 pytest tests/
 pytest tests/test_llm_filter.py -v   # single test file

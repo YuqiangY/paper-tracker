@@ -70,6 +70,23 @@ def test_generate_index_page():
         assert "Paper Tracker" in content
 
 
+def test_generate_index_page_with_features():
+    with tempfile.TemporaryDirectory() as tmpdir:
+        generate_index_page(
+            dates=["2026-04-17", "cvpr2026"],  # cvpr2026 is not a date
+            output_dir=tmpdir,
+            title="Paper Tracker",
+            features=[{"slug": "cvpr2026", "title": "CVPR 2026 精选"}],
+        )
+        content = open(os.path.join(tmpdir, "index.html")).read()
+        # feature title + link present
+        assert "CVPR 2026 精选" in content
+        assert 'href="cvpr2026.html"' in content
+        # non-date slug is NOT listed as a daily date entry
+        assert 'href="2026-04-17.html"' in content
+        assert content.count("cvpr2026.html") == 1  # only in features, not dates
+
+
 def test_daily_page_groups_by_category():
     with tempfile.TemporaryDirectory() as tmpdir:
         generate_daily_page(SAMPLE_PAPERS, "2026-04-17", tmpdir, "Test")

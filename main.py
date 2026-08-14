@@ -231,7 +231,10 @@ def stage_output(
             for f in os.listdir(site_dir)
             if f.endswith(".html") and f != "index.html"
         ]
-        generate_index_page(existing_dates, site_dir, config["output"]["html"]["title"])
+        generate_index_page(
+            existing_dates, site_dir, config["output"]["html"]["title"],
+            features=config["output"]["html"].get("features", []),
+        )
         log.info("HTML site updated at %s", site_dir)
 
         deploy_cmd = config["output"]["html"].get("deploy_cmd")
@@ -388,6 +391,16 @@ def cmd_output(config: dict):
     log.info("Output generation complete.")
 
 
+def cmd_cvpr(config: dict, limit: int | None = None):
+    from cvpr_pipeline import run_cvpr
+    run_cvpr(config, limit=limit)
+
+
+def cmd_conference(config: dict, conf_key: str, limit: int | None = None):
+    from conference_pipeline import run_conference
+    run_conference(config, conf_key, limit=limit)
+
+
 def cmd_bot_test(config: dict, target_date: str | None = None):
     base_dir = os.path.dirname(os.path.abspath(__file__))
     today = target_date or date.today().isoformat()
@@ -434,6 +447,11 @@ def main():
     subparsers.add_parser("filter", help="Run keyword + LLM filtering on today's raw data")
     subparsers.add_parser("output", help="Generate HTML and Feishu output from today's data")
     subparsers.add_parser("run-all", help="Run full pipeline (default)")
+    cvpr_parser = subparsers.add_parser("cvpr", help="One-shot CVPR conference sweep (independent of daily flow)")
+    cvpr_parser.add_argument("--limit", type=int, default=None, help="Only process first N papers (smoke test)")
+    for _conf in ("aaai", "eccv", "icml", "iclr", "acl"):
+        _p = subparsers.add_parser(_conf, help=f"One-shot {_conf.upper()} conference sweep (independent of daily flow)")
+        _p.add_argument("--limit", type=int, default=None, help="Only process first N papers (smoke test)")
     bot_test_parser = subparsers.add_parser("bot-test", help="Send bot notification to test webhook")
     bot_test_parser.add_argument("--date", default=None, help="Date to send (default: today)")
 
@@ -447,6 +465,10 @@ def main():
         cmd_filter(config)
     elif command == "output":
         cmd_output(config)
+    elif command == "cvpr":
+        cmd_cvpr(config, getattr(args, "limit", None))
+    elif command in ("aaai", "eccv", "icml", "iclr", "acl"):
+        cmd_conference(config, command, getattr(args, "limit", None))
     elif command == "bot-test":
         cmd_bot_test(config, getattr(args, "date", None))
     else:

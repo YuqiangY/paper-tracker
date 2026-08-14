@@ -27,7 +27,11 @@ def fetch_arxiv(
     cutoff = (datetime.now(timezone.utc) - timedelta(days=lookback_days)).strftime("%Y-%m-%d")
 
     for cat in unique_cats:
-        xml_text = _query_arxiv_api(cat, max_results)
+        try:
+            xml_text = _query_arxiv_api(cat, max_results)
+        except Exception as e:
+            log.warning("arXiv category %s failed: %s, skipping", cat, e)
+            continue
         for paper in _parse_arxiv_response(xml_text):
             if paper.id not in seen and paper.published >= cutoff:
                 seen[paper.id] = paper

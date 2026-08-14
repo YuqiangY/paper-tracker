@@ -1,10 +1,12 @@
 from __future__ import annotations
 import json
 import os
+import re
 from collections import defaultdict
 from jinja2 import Environment, FileSystemLoader
 
 TEMPLATE_DIR = os.path.join(os.path.dirname(os.path.dirname(__file__)), "templates")
+_DATE_RE = re.compile(r"^\d{4}-\d{2}-\d{2}$")
 
 
 def _json_or_list(val):
@@ -50,11 +52,15 @@ def generate_daily_page(
             p["max_h_index"] = None
         categories[cat].append(p)
 
+    # Pin award categories (🏆-prefixed) to the top, preserving insertion order otherwise.
+    ordered = {k: categories[k] for k in categories if k.startswith("🏆")}
+    ordered.update({k: v for k, v in categories.items() if not k.startswith("🏆")})
+
     html = template.render(
         title=title,
         date=date,
         papers=papers,
-        categories=dict(categories),
+        categories=ordered,
         summary=summary,
     )
 
@@ -67,13 +73,25 @@ def generate_index_page(
     dates: list[str],
     output_dir: str,
     title: str,
+    features: list[dict] | None = None,
 ):
+    """Rebuild the site index.
+
+    Args:
+        dates: Daily page slugs. Only ``YYYY-MM-DD`` entries are listed; other
+            names (e.g. one-off feature pages) are ignored here.
+        features: Optional list of ``{"slug", "title"}`` for topic pages shown
+            in a separate section (e.g. conference sweeps).
+    """
     env = Environment(loader=FileSystemLoader(TEMPLATE_DIR))
     template = env.get_template("index.html.j2")
 
+    date_only = [d for d in dates if _DATE_RE.match(d)]
+
     html = template.render(
         title=title,
-        dates=sorted(dates, reverse=True),
+        dates=sorted(date_only, reverse=True),
+        features=features or [],
     )
 
     os.makedirs(output_dir, exist_ok=True)

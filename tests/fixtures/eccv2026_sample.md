@@ -1,0 +1,503 @@
+# Awesome-ECCV2026-Low-Level-Vision[![Awesome](https://cdn.rawgit.com/sindresorhus/awesome/d7305f38d29fed78fa85652e3a63e154dd8e8829/media/badge.svg)](https://github.com/sindresorhus/awesome)
+
+A Collection of Papers and Codes for ECCV2026 Low Level Vision
+
+**整理汇总下今年ECCV底层视觉(Low-Level Vision)相关的论文和代码，括超分辨率，图像去雨，图像去雾，去模糊，去噪，图像恢复，图像增强，图像去摩尔纹，图像修复，图像质量评价，插帧，图像/视频压缩等任务，具体如下。**
+
+**欢迎star，fork和PR~**
+
+**Please feel free to star, fork or PR if helpful~**
+
+# 相关整理(Related Collections)
+
+- [Awesome-CVPR2024-ECCV2024-AIGC](https://github.com/Kobaayyy/Awesome-CVPR2024-ECCV2024-AIGC)
+- [Awesome-CVPR2024/CVPR2021/CVPR2020-Low-Level-Vision](https://github.com/Kobaayyy/Awesome-CVPR2024-CVPR2021-CVPR2020-Low-Level-Vision)
+- [Awesome-ECCV2020-Low-Level-Vision](https://github.com/Kobaayyy/Awesome-ECCV2024-ECCV2020-Low-Level-Vision/blob/master/ECCV2020.md)
+- [Awesome-Low-Level-Vision-Research-Groups](https://github.com/Kobaayyy/Awesome-Low-Level-Vision-Research-Groups)
+  
+# **参考或转载请注明出处**
+
+
+ECCV2026官网：https://eccv.ecva.net/
+
+ECCV接收论文列表：
+
+ECCV完整论文库：https://www.ecva.net/papers.php
+
+开会时间：2026年9月29日-10月4日
+
+论文接收公布时间：2026年
+
+**【Contents】**
+
+- [1.超分辨率(Super-Resolution)](#1.超分辨率)
+- [2.图像去雨(Image Deraining)](#2.图像去雨)
+- [3.图像去雾(Image Dehazing)](#3.图像去雾)
+- [4.去模糊(Deblurring)](#4.去模糊)
+- [5.去噪(Denoising)](#5.去噪)
+- [6.图像恢复(Image Restoration)](#6.图像恢复)
+- [7.图像增强(Image Enhancement)](#7.图像增强)
+- [8.图像修复(Inpainting)](#8.图像修复)
+- [9.高动态范围成像(HDR Imaging)](#9.高动态范围成像)
+- [10.图像质量评价(Image Quality Assessment)](#10.图像质量评价)
+- [11.插帧(Frame Interpolation)](#11.插帧)
+- [12.视频/图像压缩(Video/Image Compression)](#12.视频压缩)
+- [13.压缩图像质量增强(Compressed Image Quality Enhancement)](#13.压缩图像质量增强)
+- [14.图像去反光(Image Reflection Removal)](#14.去反光)
+- [15.图像去摩尔纹(Image Demoireing)](#15.去摩尔纹)
+- [16.图像上色(Image Colorization)](#16.上色)
+- [17.图像和谐化(Image Harmonization)](#17.和谐化)
+- [18.视频稳相(Video Stabilization)](#18.稳相)
+- [19.图像融合(Image Fusion)](#19.融合)
+- [20.其他任务(Others)](#20.其他)
+
+<a name="1.超分辨率"></a>
+
+# 1.超分辨率(Super-Resolution)
+
+### xxx
+- Paper: 
+- Code:
+
+### Allo{SR}2: Rectifying One-Step Super-Resolution to Stay Real via Allomorphic Generative Flows
+- Paper: https://arxiv.org/abs/2604.19238v2
+- Code:
+  
+### ART-VSR: Adaptive Rectified Trajectories for One-Step Video Super-Resolution
+- Paper: 
+- Code: 
+
+### AVSR-Diff: Scale-Agnostic Diffusion Priors for Temporally Consistent Arbitrary-Scale Video Super-Resolution
+- Paper: https://arxiv.org/abs/2607.00987v1
+- Code: https://github.com/KAIST-VICLab/AVSR-Diff
+  
+### CUST: Clustered Unit-level Similarity Transformer for Lightweight Image Super-Resolution
+- Paper:
+- Code: https://github.com/jwgdmkj/CUST
+
+### DP-NSL: Dual-Prior Guided Null-Space Learning with Mixture-of-Splines for Arbitrary Medical Slice Super-Resolution
+- Paper: 
+- Code: https://github.com/eeeric-code/DP-NSL
+
+### DRIFT: Difficulty-aware Rectified Flows for Through-plane MRI Super-Resolution
+- Paper: 
+- Code: https://github.com/yoonseokchoi-ai/DRIFT
+  
+### Fidelity- and Perception-Aware Local Implicit Attention for Arbitrary-Scale Image Super-Resolution
+- Paper: https://arxiv.org/abs/2606.21910
+- Code:
+  
+### Fill2SR: Repurposing Inpainting Diffusion Transformers for Real-World Super-Resolution
+- Paper:
+- Code: https://github.com/Xingfu-Yi/Fill2SR
+
+### FMA-Net++: Motion- and Exposure-Aware Joint Video Super-Resolution and Deblurring
+- Paper: https://arxiv.org/abs/2512.04390v2
+- Code: 
+
+### FreqOrtho-SR: Frequency-Guided Orthogonal Expert Learning for Real-World Image Super-Resolution
+- Paper: 
+- Code: https://github.com/sonhm3029/FreqOrtho-SR
+  
+### From Local Windows to Adaptive Candidates via Individualized Exploratory: Rethinking Attention for Image Super-Resolution
+- Paper: https://arxiv.org/abs/2601.08341
+- Code: https://github.com/CVL-UESTC/IET
+
+### MArFE: Multi-Contrast MRI Arbitrary Scale Super-Resolution with Fourier Enhancement
+- Paper: 
+- Code: https://github.com/zhiwen-shi/MArFE
+  
+### MedGSSR: Generalizable Medical Image Super-Resolution 3D Reconstruction via Hierarchical Feed-forward Gaussian Splatting
+- Paper:
+- Code: https://github.com/Azusa309/MedGSSR
+
+### NanoVSR: Towards Real-Time Video Super-Resolution on Edge Devices
+- Paper: 
+- Code: https://github.com/filippawlicki/nanovsr
+  
+### DTI: Dynamic Trajectory Initialization for Generative Face Video Super-Resolution
+- Paper:
+- Code: https://github.com/MediaX-SJTU/DTI
+
+### RefReward-SR: LR-Conditioned Reward Modeling for Preference-Aligned Super-Resolution
+- Paper: https://arxiv.org/abs/2603.24198
+- Code: https://github.com/yushuaisong/RefReward-SR
+  
+### Robust Self-Supervised Cross-Modal Super-Resolution against Real-World Misaligned Observations
+- Paper: https://arxiv.org/abs/2602.18822
+- Code:
+
+### SkelEM: Training-Signal Decoupling of Skeleton and Diffusion for Self-supervised Axial Super-Resolution in Volume Microscopy
+- Paper: https://arxiv.org/abs/2606.30012v1
+- Code:
+  
+### SparkVSR: Interactive Video Super-Resolution via Sparse Keyframe Propagation
+- Paper: https://arxiv.org/abs/2603.16864
+- Code: https://github.com/taco-group/SparkVSR
+
+### Spectral and Trajectory Regularization for Diffusion Transformer Super-Resolution
+- Paper: https://arxiv.org/abs/2603.06275v2
+- Code: https://github.com/jkwang28/StrSR
+  
+### TEASR: Training-Efficient Any-Step Diffusion Transformer for Real-World Image Super-Resolution
+- Paper: https://arxiv.org/abs/2606.16188
+- Code: https://github.com/MediaX-SJTU/TEASR
+
+
+<a name="2.图像去雨"></a>
+
+# 2.图像去雨(Image Deraining)
+
+### Unified Removal of Raindrops and Reflections: A New Benchmark and A Novel Pipeline
+- Paper: https://arxiv.org/abs/2603.16446
+- Code: https://github.com/hezw2016/RDRF-dataset
+  
+### Unified Removal of Raindrops and Reflections: A New Benchmark and A Novel Pipeline
+- Paper: https://arxiv.org/abs/2603.16446
+- Code:
+
+
+<a name="3.图像去雾"></a>
+
+# 3.图像去雾(Image Dehazing)
+
+  
+<a name="4.去模糊"></a>
+
+# 4.去模糊(Deblurring)
+
+### CogSENet: Blind Image Deblurring with Blur-Conditioned Semantic Routing and Explicit Frequency Fusion
+- Paper: https://arxiv.org/abs/2606.30030v1
+- Code:
+  
+### PECA: A Benchmark for Heterogeneous Stereo Deblurring with Physically- and Epipolar-constrained Cross Attention
+- Paper: https://arxiv.org/abs/2606.25962
+- Code: https://github.com/shinhoju/PECA
+
+### UHD Image Deblurring via Autoregressive Flow with Ill-conditioned Constraints
+- Paper: https://arxiv.org/abs/2603.10517
+- Code:
+
+  
+<a name="5.去噪"></a>
+
+# 5.去噪(Denoising)
+
+### Bayesian Self-Attention with Local Pixel Correlations for Lightweight Denoising Transformers
+- Paper: 
+- Code: https://github.com/Ryann2001/NLformer_Lightweight_Denoising
+  
+### BBRD: Brightness Bias-Robust Denoising
+- Paper:
+- Code: https://github.com/Sungjun01/BBRD
+
+### Denoising the Deep Sky: Physics-Based CCD Noise Formation for Astronomical Imaging
+- Paper: 
+- Code: https://github.com/ShuhongLL/Denoising-Deep-Sky
+  
+### Hybrid-LUT: Channel-Aware Hybrid Lookup Table and Filtering for Efficient Image Denoising
+- Paper: 
+- Code: https://github.com/Ai-ZL/Hybrid-LUT
+  
+### Frames2Residual: Spatiotemporal Decoupling for Self-Supervised Video Denoising
+- Paper: https://arxiv.org/abs/2603.10417
+- Code: https://github.com/m1NGGi/F2R
+
+### NGPS: Structure-Preserving Self-Supervised Denoising via Neighbor-Guided Patch Sampling
+- Paper: https://arxiv.org/abs/2606.23200
+- Code: https://github.com/cv-cho/NGPS
+
+### YADO: Rethinking Real-World MRI Denoising: Learning from Physical Noise
+- Paper: https://srassmann.github.io/assets/files/2026_ECCV_YADO.pdf
+- Code: https://github.com/Deep-MI/YADO
+
+### YeTI: You Only Need Two Noisy Images for Real-World sRGB Noise Generation
+- Paper: https://arxiv.org/abs/2607.09193v1
+- Code:
+  
+<a name="6.图像恢复"></a>
+
+# 6.图像恢复(Image Restoration)
+
+### Beyond the Boundary: RL-Driven Solution Space Exploration for Blind Face Restoration
+- Paper:
+- Code: https://github.com/01NeuralNinja/BFR_RL
+
+### Fast and Accurate Image Restoration and Generation with Rank Enhanced Linear Attention
+- Paper: https://arxiv.org/abs/2505.16157
+- Code: https://github.com/shallowdream204/LAformer
+
+### Flow Straight to Reality: Perceptually Consistent Flow Matching for Efficient Image Restoration
+- Paper: 
+- Code: https://github.com/aiimaginglab/PCFlow
+  
+### Geodesic Flow Matching on a Riemannian Degradation Manifold for Blind Image Restoration
+- Paper: https://arxiv.org/abs/2606.06278
+- Code:
+
+### LogicIR: Logic Gate Networks for Image Restoration
+- Paper: https://arxiv.org/abs/2606.26609
+- Code: https://github.com/jimmy9704/LogicIR
+  
+### PASDiff: Physics-Aware Semantic Guidance for Joint Real-World Low-Light Face Enhancement and Restoration
+- Paper: https://arxiv.org/abs/2603.24969
+- Code: https://github.com/YlNi26/PASDiff
+
+### QualiTeacher: Quality-Conditioned Pseudo-Labeling for Real-World Image Restoration
+- Paper: https://arxiv.org/abs/2603.08030
+- Code:
+
+### SONIC: Spectral Optimization of Noise for Inpainting with Consistency
+- Paper: https://arxiv.org/abs/2511.19985v3
+- Code:
+  
+### TaskTok: Delving into Task Tokens for Task-driven Image Restoration
+- Paper: https://arxiv.org/abs/2606.26615
+- Code: https://github.com/jimmy9704/TaskTok
+  
+### TIGER: Taming Identity, Geometry, and Generative Priors for High-Quality Face Video Restoration
+- Paper: https://arxiv.org/abs/2606.24336
+- Code:
+
+### UniH3: Unifying Hierarchical Homogeneity and Heterogeneity for All-in-One Medical Image Restoration
+- Paper: 
+- Code: https://github.com/Yaziwel/UniH3
+
+<a name="7.图像增强"></a>
+
+# 7.图像增强(Image Enhancement)
+
+### Live2K: Perceiving Better Moments: Cover Frame Reselection and Enhancement for Live Photos
+- Paper:
+- Code: https://github.com/CVL-UESTC/Live2K
+
+### Low-Level Dataset Distillation for Medical Image Enhancement
+- Paper: 
+- Code: https://github.com/xufz123/Med_LLDD
+  
+### PASDiff: Physics-Aware Semantic Guidance for Joint Real-World Low-Light Face Enhancement and Restoration
+- Paper: https://arxiv.org/abs/2603.24969
+- Code: https://github.com/YlNi26/PASDiff
+
+### TPCNet: A Low-Light Image Enhancement Network Inspired by Triple Physical Constraints
+- Paper: 
+- Code: https://github.com/2020shijingyi/TPCNet
+  
+<a name="8.图像修复"></a>
+
+# 8.图像修复(Inpainting)
+
+### DriveWeaver: Point-Conditioned Video Inpainting for Controllable Vehicle Insertion in Autonomous Driving Simulation
+- Paper: https://arxiv.org/abs/2606.31918v2
+- Code: https://github.com/LogosRoboticsGroup/DriveWeaver
+  
+### Moebius: 0.2B Lightweight Image Inpainting Framework with 10B-Level Performance
+- Paper: https://arxiv.org/abs/2606.19195
+- Code: https://github.com/hustvl/Moebius
+
+
+<a name="9.高动态范围成像"></a>
+
+# 9.高动态范围成像(HDR Imaging)
+
+### GMODiff: One-Step Gain Map Refinement with Diffusion Priors for Efficient HDR Reconstruction
+- Paper: https://arxiv.org/abs/2512.16357v3
+- Code: https://github.com/gbymat/GMODiff
+
+
+
+<a name="10.图像质量评价"></a>
+
+# 10.图像质量评价(Image Quality Assessment)
+
+### A benchmark and evaluation framework for image quality assessment in virtual try-on (VTON) systems.
+- Paper: https://arxiv.org/abs/2603.13057
+- Code: https://github.com/litelightlite/VTON-IQA
+
+### IQA-T1: Tool-Based Visual Evidence Reasoning for Image Quality Assessment
+- Paper: 
+- Code: https://github.com/zibuyu-02/IQA-T1
+
+### Zoom-IQA: Image Quality Assessment with Reliable Region-Aware Reasoning
+- Paper: https://arxiv.org/abs/2601.02918v3
+- Code: 
+
+
+<a name="11.插帧"></a>
+
+# 11.插帧(Frame Interpolation)
+
+### SVI360: Spherical Video Interpolation
+- Paper: https://arxiv.org/abs/2607.11710
+- Code:
+  
+### MASS: Motion-Aligned Selective Scan for Refinement in Flow-Based Video Frame Interpolation
+- Paper: https://arxiv.org/abs/2606.27718v1
+- Code: 
+
+<a name="12.视频压缩"></a>
+
+# 12.视频/图像压缩(Video/Image Compression)
+
+### FastPCC: Towards Practical Lossless Neural Compression for LiDAR Point Clouds
+- Paper: https://arxiv.org/abs/2603.25260
+- Code: https://github.com/pengpeng-yu/FastPCC
+
+### MixCompress: Mixture of Experts for Variable Rate Learned Image Compression
+- Paper: https://arxiv.org/abs/2607.14334
+- Code:
+  
+### Next-Frame Decoding for Ultra-Low-Bitrate Image Compression with Video Diffusion Priors
+- Paper: https://arxiv.org/abs/2603.15129v3
+- Code:
+  
+### PIC: Revisiting INR for Image Coding with Fast Encoding and Sub-Millisecond Decoding
+- Paper:
+- Code: https://github.com/actcwlf/PIC
+
+<a name="13.压缩图像质量增强"></a>
+
+# 13.压缩图像质量增强(Compressed Image Quality Enhancement)
+
+
+
+
+
+<a name="14.去反光"></a>
+
+# 14.图像去反光(Image Reflection Removal)
+
+### FUMO: Prior-Modulated Diffusion for Single Image Reflection Removal
+- Paper: https://arxiv.org/abs/2603.19036v2
+- Code: https://github.com/Lucious-Desmon/FUMO
+  
+### PRISM: Latent Composition Consistency for Single-Image Reflection Removal
+- Paper:
+- Code: https://github.com/junsung6140/PRISM-SIRR
+
+### Unified Removal of Raindrops and Reflections: A New Benchmark and A Novel Pipeline
+- Paper: https://arxiv.org/abs/2603.16446
+- Code: https://github.com/hezw2016/RDRF-dataset
+
+<a name="15.去摩尔纹"></a>
+
+# 15.图像去摩尔纹(Image Demoireing)
+
+### Fabric Image Demoiréing Benchmark from Synthesis to Restoration
+- Paper: https://arxiv.org/abs/2606.24072
+- Code: https://github.com/Running-Turtle1/Fabric-Demoireing
+
+### Freqformer: Image-Demoiréing Transformer via Efficient Frequency Decomposition
+- Paper: https://arxiv.org/abs/2505.19120
+- Code: https://github.com/xyLiu339/Freqformer
+
+
+
+
+<a name="16.上色"></a>
+
+# 16.图像上色(Image Colorization)
+
+
+
+  
+<a name="17.和谐化"></a>
+
+# 17.图像和谐化(Image Harmonization)
+
+
+  
+<a name="18.稳相"></a>
+
+# 18.视频稳相(Video Stabilization)
+
+
+
+
+
+
+<a name="19.融合"></a>
+
+# 19.图像融合(Image Fusion)
+
+### ExpoMotion: A Large-Scale Benchmark and A Householder Projection Network for Multi-Exposure Fusion
+- Paper: https://arxiv.org/abs/2607.03110
+- Code: https://github.com/Leo-LiuYao/ExpoMotion
+  
+### LIIFusion: Coarse-to-fine Framework for Generative MEF via Implicit Neural Representation
+- Paper:
+- Code: https://github.com/sangmin213/LIIFusion
+
+### MAVFusion: Efficient Infrared and Visible Video Fusion via Motion-Aware Sparse Interaction
+- Paper: https://arxiv.org/abs/2604.01958
+- Code: https://github.com/ixilai/MAVFusion
+
+### Multi-modality Image Fusion under Adverse Weather: Mask-Guided Feature Restoration and Interaction
+- Paper: 
+- Code: https://github.com/ixilai/AMG-Fuse
+
+### There and Back Again: A Flexible-Frame Transformer for Multi-Exposure Fusion
+- Paper: https://arxiv.org/abs/2606.27905v1
+- Code:
+  
+### UHD-MFF: Shattering Barriers in Multi-Focus Ultra-High-Definition Image Fusion via Learnable Lookup Tables
+- Paper:
+- Code: https://github.com/zyb5/UHD-MFF
+
+<a name="20.其他"></a>
+
+# 20.其他任务(Others)
+
+### ColorFM: An Optimization-to-Learning Framework for Color Transfer via Flow Matching
+- Paper: https://arxiv.org/abs/2607.07119v1
+- Code: https://github.com/cszn/ColorFM
+  
+### Complex-Valued 2D Gaussian Representation for Computer-Generated Holography
+- Paper: https://arxiv.org/abs/2511.15022
+- Code: https://github.com/complight/Complex-Valued_2D_Gaussian_Representation
+  
+### CoSTA: Stabilizing Deep Reconstruction Operators with Contractive Anchoring
+- Paper:
+- Code: https://github.com/trishitmg/CoSTA
+
+### Dotting the Eye: An Intent-Driven Image Retouching Agent for Visual Focus Enhancement
+- Paper: 
+- Code: https://github.com/DragonisCV/EyeControl
+
+### E-VLA: Event-Augmented Vision-Language-Action Model for Dark and Blurred Scenes
+- Paper: https://arxiv.org/abs/2604.04834v2
+- Code: https://github.com/JJayzee/E-VLA
+
+### Filterless Snapshot Hyperspectral Imaging using Guided Patch Diffusion
+- Paper: https://arxiv.org/abs/2412.02798v3
+- Code:
+  
+### Harmonic-Siren: Recurrent Sinusoidal INRs for Efficient High-Fidelity Representation
+- Paper:
+- Code: https://github.com/hyeon-cho/Harmonic-Siren
+
+### Integrated Forward-Inverse Network for Lensless Image Reconstruction
+- Paper: https://arxiv.org/abs/2607.04608v1
+- Code:
+
+### Interpretation-Oriented Cloud Removal via Observation-Anchored Residual Flow with Geo-Contextual Alignment
+- Paper: https://arxiv.org/abs/2607.02471
+- Code:
+  
+### MirrorPPR: Exemplar-Based Portrait Photo Retouching
+- Paper: https://arxiv.org/abs/2606.29308v1
+- Code: https://github.com/SJTU-DENG-Lab/MirrorPPR
+  
+### PolarAPP: Beyond Polarization Demosaicking for Polarimetric Applications
+- Paper: https://arxiv.org/abs/2603.23071
+- Code: https://github.com/roydon-luo/PolarAPP
+  
+### UniStitch: Unifying Semantic and Geometric Features for Image Stitching
+- Paper: https://arxiv.org/abs/2603.10568
+- Code: https://github.com/MmelodYy/UniStitch
+
+<font color=red size=5>持续更新~</font>
+
+
+
+
