@@ -4,6 +4,12 @@ import sqlite3
 from datetime import datetime, timezone
 from models import Paper
 
+STATUS_PENDING = "pending"
+STATUS_KEYWORD_REJECTED = "keyword_rejected"
+STATUS_SCORED = "scored"
+STATUS_SCORE_FAILED = "score_failed"
+SCHEMA_VERSION = 1
+
 
 class PaperDB:
     def __init__(self, db_path: str):
@@ -47,6 +53,12 @@ class PaperDB:
             "citation_count": "INTEGER",
             "tldr": "TEXT",
             "doi": "TEXT",
+            "score_relevance": "INTEGER",
+            "score_novelty": "INTEGER",
+            "score_quality": "INTEGER",
+            "selected": "INTEGER DEFAULT 0",
+            "selected_on": "TEXT",
+            "filter_status": "TEXT",
         }
         added = False
         for col, col_type in new_columns.items():
@@ -55,6 +67,25 @@ class PaperDB:
                 added = True
         if added:
             self.conn.commit()
+        self._migrate_score_scale()
+
+    def _migrate_score_scale(self):
+        """One-time: legacy 1-10 scores -> 0-100; legacy scored rows were all selected."""
+        version = self.conn.execute("PRAGMA user_version").fetchone()[0]
+        if version >= SCHEMA_VERSION:
+            return
+        self.conn.execute(
+            """UPDATE papers SET relevance_score = relevance_score * 10
+               WHERE relevance_score IS NOT NULL AND relevance_score <= 10"""
+        )
+        self.conn.execute(
+            """UPDATE papers SET selected = 1, selected_on = substr(first_seen, 1, 10),
+                   filter_status = ?
+               WHERE relevance_score IS NOT NULL""",
+            (STATUS_SCORED,),
+        )
+        self.conn.execute(f"PRAGMA user_version = {SCHEMA_VERSION}")
+        self.conn.commit()
 
     def exists(self, paper_id: str) -> bool:
         row = self.conn.execute(
@@ -70,8 +101,8 @@ class PaperDB:
             """INSERT INTO papers
                (id, title, authors, abstract, url, source, published,
                 categories, pdf_url, first_seen, authors_enriched,
-                venue, citation_count, tldr, doi)
-               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+                venue, citation_count, tldr, doi, filter_status)
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
             (
                 paper.id,
                 paper.title,
@@ -88,6 +119,7 @@ class PaperDB:
                 paper.citation_count,
                 paper.tldr,
                 paper.doi,
+                STATUS_PENDING,
             ),
         )
         self.conn.commit()
@@ -134,6 +166,42 @@ class PaperDB:
         )
         self.conn.commit()
 
+    def update_scores(self, paper: Paper):
+        self.conn.execute(
+            """UPDATE papers
+               SET relevance_score = ?, score_relevance = ?, score_novelty = ?,
+                   score_quality = ?, primary_category = ?, filter_status = ?
+               WHERE id = ?""",
+            (paper.relevance_score, paper.score_relevance, paper.score_novelty,
+             paper.score_quality, paper.primary_category, STATUS_SCORED, paper.id),
+        )
+        self.conn.commit()
+
+    def set_filter_status(self, paper_ids: list[str], status: str):
+        self.conn.executemany(
+            "UPDATE papers SET filter_status = ? WHERE id = ?",
+            [(status, pid) for pid in paper_ids],
+        )
+        self.conn.commit()
+
+    def mark_selected(self, paper_ids: list[str], selected_on: str):
+        self.conn.executemany(
+            "UPDATE papers SET selected = 1, selected_on = ? WHERE id = ?",
+            [(selected_on, pid) for pid in paper_ids],
+        )
+        self.conn.commit()
+
+    def get_retry_candidates(self, since_iso: str, before_iso: str, limit: int) -> list[Paper]:
+        rows = self.conn.execute(
+            """SELECT * FROM papers
+               WHERE filter_status IN (?, ?)
+                 AND first_seen >= ? AND first_seen < ?
+               ORDER BY first_seen DESC
+               LIMIT ?""",
+            (STATUS_PENDING, STATUS_SCORE_FAILED, since_iso, before_iso, limit),
+        ).fetchall()
+        return [_row_to_paper(r) for r in rows]
+
     def get(self, paper_id: str) -> dict | None:
         row = self.conn.execute(
             "SELECT * FROM papers WHERE id = ?", (paper_id,)
@@ -168,13 +236,25 @@ class PaperDB:
     ) -> list[dict]:
         rows = self.conn.execute(
             """SELECT * FROM papers
-               WHERE first_seen LIKE ?
+               WHERE selected = 1 AND selected_on = ?
                  AND relevance_score IS NOT NULL
                  AND relevance_score >= ?
                ORDER BY relevance_score DESC""",
-            (f"{date}%", min_score),
+            (date, min_score),
         ).fetchall()
         return [dict(r) for r in rows]
 
     def close(self):
         self.conn.close()
+
+
+def _row_to_paper(row: sqlite3.Row) -> Paper:
+    def _load(value):
+        return json.loads(value) if value else None
+    return Paper(
+        id=row["id"], title=row["title"], authors=_load(row["authors"]) or [],
+        abstract=row["abstract"] or "", url=row["url"] or "", source=row["source"] or "",
+        published=row["published"] or "", categories=_load(row["categories"]) or [],
+        pdf_url=row["pdf_url"], authors_enriched=_load(row["authors_enriched"]),
+        venue=row["venue"], citation_count=row["citation_count"], tldr=row["tldr"], doi=row["doi"],
+    )

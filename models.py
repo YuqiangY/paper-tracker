@@ -32,6 +32,13 @@ class Paper:
     citation_count: int | None = None
     tldr: str | None = None
     doi: str | None = None
+    score_relevance: int | None = None
+    score_novelty: int | None = None
+    score_quality: int | None = None
+    conclusion: str | None = None
+    code_url: str | None = None
+    html_fetched: bool = False
+    author_raw_text: str | None = None
 
     @property
     def max_h_index(self) -> int | None:

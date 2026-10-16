@@ -70,18 +70,6 @@ def test_get_unpushed_feishu():
         assert unpushed[0]["id"] == "id-2"
 
 
-def test_get_papers_by_date():
-    from datetime import datetime, timezone
-    with tempfile.TemporaryDirectory() as tmpdir:
-        db = PaperDB(os.path.join(tmpdir, "test.db"))
-        p = make_paper()
-        db.insert(p)
-        db.update_filter_result(p.id, 8.0, "底层视觉", "摘要", "reason", ["tag"])
-        today_utc = datetime.now(timezone.utc).date().isoformat()
-        papers = db.get_papers_by_date(today_utc, min_score=7.0)
-        assert len(papers) == 1
-        assert papers[0]["id"] == "2404.12345"
-
 
 def test_insert_with_enriched_authors():
     with tempfile.TemporaryDirectory() as tmpdir:
@@ -127,3 +115,112 @@ def test_migration_adds_column():
         db.insert(p)
         row = db.get(p.id)
         assert "authors_enriched" in row.keys()
+
+
+from datetime import datetime, timedelta, timezone
+from storage.db import (
+    STATUS_PENDING, STATUS_KEYWORD_REJECTED, STATUS_SCORED, STATUS_SCORE_FAILED,
+)
+
+
+def _scored(p, total=85, rel=36, nov=24, qual=25, cat="底层视觉"):
+    p.relevance_score = total
+    p.score_relevance, p.score_novelty, p.score_quality = rel, nov, qual
+    p.primary_category = cat
+    return p
+
+
+def test_insert_sets_pending_status():
+    with tempfile.TemporaryDirectory() as tmpdir:
+        db = PaperDB(os.path.join(tmpdir, "test.db"))
+        db.insert(make_paper())
+        assert db.get("2404.12345")["filter_status"] == STATUS_PENDING
+
+
+def test_update_scores_stores_subscores_and_status():
+    with tempfile.TemporaryDirectory() as tmpdir:
+        db = PaperDB(os.path.join(tmpdir, "test.db"))
+        p = make_paper()
+        db.insert(p)
+        db.update_scores(_scored(p))
+        row = db.get(p.id)
+        assert (row["relevance_score"], row["score_relevance"], row["score_novelty"], row["score_quality"]) == (85, 36, 24, 25)
+        assert row["primary_category"] == "底层视觉"
+        assert row["filter_status"] == STATUS_SCORED
+        assert row["selected"] == 0
+
+
+def test_get_papers_by_date_uses_selected_on():
+    with tempfile.TemporaryDirectory() as tmpdir:
+        db = PaperDB(os.path.join(tmpdir, "test.db"))
+        sel, unsel = make_paper("id-1"), make_paper("id-2")
+        for p in (sel, unsel):
+            db.insert(p)
+            db.update_scores(_scored(p))
+        db.mark_selected(["id-1"], "2026-10-15")
+        rows = db.get_papers_by_date("2026-10-15")
+        assert [r["id"] for r in rows] == ["id-1"]
+        assert db.get_papers_by_date("2026-10-14") == []
+
+
+def test_set_filter_status_bulk():
+    with tempfile.TemporaryDirectory() as tmpdir:
+        db = PaperDB(os.path.join(tmpdir, "test.db"))
+        for i in ("a", "b"):
+            db.insert(make_paper(i))
+        db.set_filter_status(["a", "b"], STATUS_KEYWORD_REJECTED)
+        assert db.get("a")["filter_status"] == STATUS_KEYWORD_REJECTED
+        assert db.get("b")["filter_status"] == STATUS_KEYWORD_REJECTED
+
+
+def test_get_retry_candidates_returns_pending_and_failed_in_window():
+    with tempfile.TemporaryDirectory() as tmpdir:
+        db = PaperDB(os.path.join(tmpdir, "test.db"))
+        for i in ("pend", "fail", "done", "rej"):
+            db.insert(make_paper(i))
+        db.set_filter_status(["fail"], STATUS_SCORE_FAILED)
+        db.update_scores(_scored(make_paper("done")))
+        db.set_filter_status(["rej"], STATUS_KEYWORD_REJECTED)
+        now = datetime.now(timezone.utc)
+        got = db.get_retry_candidates(
+            since_iso=(now - timedelta(days=14)).isoformat(),
+            before_iso=(now + timedelta(seconds=1)).isoformat(),
+            limit=10,
+        )
+        assert sorted(p.id for p in got) == ["fail", "pend"]
+        assert got[0].authors == ["Alice"]
+        none_before = db.get_retry_candidates(
+            since_iso=(now - timedelta(days=14)).isoformat(),
+            before_iso=(now - timedelta(days=1)).isoformat(),
+            limit=10,
+        )
+        assert none_before == []
+
+
+def _legacy_db(path):
+    """A DB as written by the old code: 1-10 scores, no new columns, user_version 0."""
+    conn = sqlite3.connect(path)
+    conn.executescript("""
+        CREATE TABLE papers (id TEXT PRIMARY KEY, title TEXT NOT NULL, authors TEXT, abstract TEXT,
+            url TEXT, source TEXT, published TEXT, categories TEXT, pdf_url TEXT, first_seen TEXT,
+            relevance_score REAL, primary_category TEXT, summary_zh TEXT, why_relevant TEXT, tags TEXT,
+            pushed_feishu INTEGER DEFAULT 0, pushed_html INTEGER DEFAULT 0, authors_enriched TEXT);
+        INSERT INTO papers (id, title, first_seen, relevance_score) VALUES ('old-hi', 'T', '2026-10-09T10:00:00+00:00', 8.0);
+        INSERT INTO papers (id, title, first_seen, relevance_score) VALUES ('old-null', 'T', '2026-10-09T10:00:00+00:00', NULL);
+    """)
+    conn.commit()
+    conn.close()
+
+
+def test_score_migration_runs_once():
+    with tempfile.TemporaryDirectory() as tmpdir:
+        path = os.path.join(tmpdir, "legacy.db")
+        _legacy_db(path)
+        PaperDB(path).close()
+        db = PaperDB(path)
+        hi, null = db.get("old-hi"), db.get("old-null")
+        assert hi["relevance_score"] == 80
+        assert hi["selected"] == 1 and hi["selected_on"] == "2026-10-09"
+        assert hi["filter_status"] == STATUS_SCORED
+        assert null["relevance_score"] is None and null["filter_status"] is None
+        assert [r["id"] for r in db.get_papers_by_date("2026-10-09")] == ["old-hi"]
