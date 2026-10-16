@@ -79,11 +79,22 @@ def _score_emoji(score) -> str:
     if score is None or score == "?":
         return ""
     s = float(score)
-    if s >= 9:
+    if s >= 90:
         return "fire"
-    if s >= 8:
+    if s >= 80:
         return "star"
     return "page_facing_up"
+
+
+def format_score(paper: dict) -> str:
+    score = paper.get("relevance_score")
+    if score is None:
+        return "?"
+    total = f"{float(score):g}"
+    parts = (paper.get("score_relevance"), paper.get("score_novelty"), paper.get("score_quality"))
+    if any(v is None for v in parts):
+        return total
+    return f"{total}（相关 {parts[0]} · 新颖 {parts[1]} · 质量 {parts[2]}）"
 
 
 def _build_markdown(papers: list[dict], date: str) -> str:
@@ -110,7 +121,7 @@ def _build_markdown(papers: list[dict], date: str) -> str:
 
     for i, p in enumerate(top3):
         title = p.get("title", "Untitled")
-        score = p.get("relevance_score", "?")
+        score = format_score(p)
         author_names, author_affils = _format_author(p, rich=True)
         summary = p.get("summary_zh", "")
         why = p.get("why_relevant", "")
@@ -177,13 +188,13 @@ def _build_markdown(papers: list[dict], date: str) -> str:
             max_h = _max_h_index(p)
 
             title_md = f"[{title}]({url})" if url else title
-            bg = "light-yellow" if float(score or 0) >= 8 else "light-grey"
+            bg = "light-yellow" if float(score or 0) >= 80 else "light-grey"
             emoji_attr = f' emoji="{emoji}"' if emoji else ""
 
             lines.extend([
                 f'<callout{emoji_attr} background-color="{bg}">',
                 "",
-                f"**{title_md}** — 评分 **{score}**",
+                f"**{title_md}** — 评分 **{format_score(p)}**",
                 "",
                 f"**作者**: {author_names}",
             ])

@@ -26,11 +26,11 @@ def fetch_s2_search(
     seen: dict[str, Paper] = {}
     consecutive_429 = 0
 
-    for query in queries:
+    for idx, query in enumerate(queries):
         if consecutive_429 >= CIRCUIT_BREAKER_THRESHOLD:
             log.warning(
                 "S2 circuit breaker tripped after %d consecutive 429s, skipping remaining %d queries",
-                consecutive_429, len(queries) - len(seen),
+                consecutive_429, len(queries) - idx,
             )
             break
 

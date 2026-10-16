@@ -118,3 +118,11 @@ def test_fetch_s2_search_passes_year(mock_get):
     assert params["year"] == "2026"
     assert params["limit"] == "15"
     assert params["query"] == "test"
+
+
+@patch("fetcher.s2_search_fetcher.time.sleep")
+@patch("fetcher.s2_search_fetcher._search_one_query", return_value=([], True))
+def test_circuit_breaker_logs_remaining_query_count(_q, _sleep, caplog):
+    from fetcher.s2_search_fetcher import fetch_s2_search
+    fetch_s2_search([f"q{i}" for i in range(10)])
+    assert "skipping remaining 7 queries" in caplog.text

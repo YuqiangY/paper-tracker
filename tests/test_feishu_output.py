@@ -96,12 +96,12 @@ def test_build_markdown_multiple_categories():
 def test_build_markdown_score_backgrounds():
     papers = [
         {
-            "title": "High Score", "url": "https://a.com", "relevance_score": 9,
+            "title": "High Score", "url": "https://a.com", "relevance_score": 90,
             "primary_category": "底层视觉", "summary_zh": "高分", "tags": "[]",
             "authors": '["X"]',
         },
         {
-            "title": "Low Score", "url": "https://b.com", "relevance_score": 7,
+            "title": "Low Score", "url": "https://b.com", "relevance_score": 70,
             "primary_category": "底层视觉", "summary_zh": "低分", "tags": "[]",
             "authors": '["Y"]',
         },
@@ -232,3 +232,25 @@ def test_feishu_doc_session_expired_is_failed(mock_run):
 
 def test_feishu_doc_no_papers_skipped():
     assert generate_feishu_doc([], "2026-10-15") == "skipped"
+
+
+def test_score_emoji_thresholds_on_100_scale():
+    from output.feishu_output import _score_emoji
+    assert _score_emoji(92) == "fire"
+    assert _score_emoji(85) == "star"
+    assert _score_emoji(70) == "page_facing_up"
+
+
+def test_format_score_with_and_without_subscores():
+    from output.feishu_output import format_score
+    assert format_score({"relevance_score": 85, "score_relevance": 36, "score_novelty": 24,
+                         "score_quality": 25}) == "85（相关 36 · 新颖 24 · 质量 25）"
+    assert format_score({"relevance_score": 80.0}) == "80"
+    assert format_score({}) == "?"
+
+
+def test_build_markdown_shows_subscores():
+    papers = [{"title": "T", "url": "u", "relevance_score": 85, "score_relevance": 36,
+               "score_novelty": 24, "score_quality": 25, "primary_category": "底层视觉",
+               "summary_zh": "s", "tags": "[]", "authors": '["A"]'}]
+    assert "评分 **85（相关 36 · 新颖 24 · 质量 25）**" in _build_markdown(papers, "2026-10-15")

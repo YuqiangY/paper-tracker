@@ -44,6 +44,8 @@ def generate_daily_page(
         p.setdefault("venue", None)
         p.setdefault("citation_count", None)
         p.setdefault("tldr", None)
+        for key in ("score_relevance", "score_novelty", "score_quality"):
+            p.setdefault(key, None)
         p["authors_enriched_list"] = raw_enriched or []
         if raw_enriched:
             h_indices = [a["h_index"] for a in raw_enriched if a.get("h_index") is not None]

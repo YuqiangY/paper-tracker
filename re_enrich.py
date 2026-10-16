@@ -5,6 +5,7 @@ import os
 import sys
 import logging
 
+import yaml
 from dotenv import load_dotenv
 load_dotenv(override=True)
 
@@ -20,7 +21,8 @@ DATES = sys.argv[1:] or ["2026-04-21", "2026-04-22", "2026-04-23"]
 s2_api_key = os.environ.get("SEMANTIC_SCHOLAR_API_KEY")
 llm_api_key = os.environ.get("ANTHROPIC_API_KEY", "")
 llm_base_url = os.environ.get("ANTHROPIC_BASE_URL") or None
-llm_model = "xiaomi/mimo-v2-pro"
+with open(os.path.join(os.path.dirname(__file__), "config.yaml")) as _f:
+    llm_model = yaml.safe_load(_f)["filter"]["llm_model"]
 
 
 def report(date: str, papers: list[Paper]):

@@ -8,7 +8,7 @@ SAMPLE_PAPERS = [
         "primary_category": "底层视觉",
         "summary_zh": "一种新超分方法",
         "tags": '["super-resolution"]',
-        "relevance_score": 8.5,
+        "relevance_score": 85,
         "url": "https://arxiv.org/abs/2404.12345",
     },
     {
@@ -16,7 +16,7 @@ SAMPLE_PAPERS = [
         "primary_category": "视频算法",
         "summary_zh": "视频生成模型",
         "tags": '["video-generation", "diffusion"]',
-        "relevance_score": 9.0,
+        "relevance_score": 90,
         "url": "https://arxiv.org/abs/2404.67890",
     },
 ]
@@ -49,8 +49,8 @@ def test_build_prompt_includes_tags():
 
 def test_build_prompt_includes_scores():
     prompt = _build_prompt(SAMPLE_PAPERS, INTERESTS)
-    assert "8.5分" in prompt
-    assert "9.0分" in prompt
+    assert "[85分]" in prompt
+    assert "[90分]" in prompt
 
 
 @patch("output.summary._call_llm")
@@ -100,3 +100,15 @@ def test_call_llm_skips_thinking_blocks(mock_anthropic):
 
     result = _call_llm("prompt", "model", "key", None)
     assert result == "### Summary content"
+
+
+@patch("output.summary.anthropic")
+def test_call_llm_uses_8192_tokens_and_warns_on_truncation(mock_anthropic, caplog):
+    msg = MagicMock()
+    block = MagicMock()
+    block.type, block.text = "text", "partial"
+    msg.content, msg.stop_reason = [block], "max_tokens"
+    mock_anthropic.Anthropic.return_value.messages.create.return_value = msg
+    assert _call_llm("p", "m", "k", None) == "partial"
+    assert mock_anthropic.Anthropic.return_value.messages.create.call_args.kwargs["max_tokens"] == 8192
+    assert "truncated" in caplog.text

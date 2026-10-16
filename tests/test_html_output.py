@@ -14,7 +14,7 @@ SAMPLE_PAPERS = [
         "source": "arxiv",
         "published": "2026-04-17",
         "categories": '["cs.CV"]',
-        "relevance_score": 8.5,
+        "relevance_score": 85.0,
         "primary_category": "底层视觉",
         "summary_zh": "一种新的超分方法",
         "tags": '["super-resolution"]',
@@ -28,7 +28,7 @@ SAMPLE_PAPERS = [
         "source": "arxiv",
         "published": "2026-04-17",
         "categories": '["cs.CV"]',
-        "relevance_score": 7.0,
+        "relevance_score": 70.0,
         "primary_category": "视频算法",
         "summary_zh": "视频生成模型",
         "tags": '["video generation"]',
@@ -51,7 +51,7 @@ def test_generate_daily_page():
         assert "Video Generation Model" in content
         assert "底层视觉" in content
         assert "视频算法" in content
-        assert "8.5" in content
+        assert ">85<" in content
 
 
 def test_generate_index_page():
@@ -117,3 +117,25 @@ def test_daily_page_handles_no_enrichment():
         generate_daily_page(SAMPLE_PAPERS, "2026-04-17", tmpdir, "Test")
         content = open(os.path.join(tmpdir, "2026-04-17.html")).read()
         assert "Alice" in content
+
+
+def test_daily_page_shows_integer_score_and_subscores():
+    papers = [{"title": "T", "url": "u", "relevance_score": 85.0, "score_relevance": 36,
+               "score_novelty": 24, "score_quality": 25, "primary_category": "底层视觉",
+               "summary_zh": "s", "tags": "[]", "authors": '["A"]'}]
+    with tempfile.TemporaryDirectory() as tmpdir:
+        generate_daily_page(papers, "2026-10-15", tmpdir, "PT")
+        with open(os.path.join(tmpdir, "2026-10-15.html")) as f:
+            html = f.read()
+    assert ">85<" in html
+    assert "相关 36 · 新颖 24 · 质量 25" in html
+
+
+def test_daily_page_renders_legacy_paper_without_subscores():
+    papers = [{"title": "T", "url": "u", "relevance_score": 80.0, "primary_category": "底层视觉",
+               "summary_zh": "s", "tags": "[]", "authors": '["A"]'}]
+    with tempfile.TemporaryDirectory() as tmpdir:
+        generate_daily_page(papers, "2026-10-15", tmpdir, "PT")
+        with open(os.path.join(tmpdir, "2026-10-15.html")) as f:
+            html = f.read()
+    assert ">80<" in html and "新颖" not in html

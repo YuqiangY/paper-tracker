@@ -8,6 +8,9 @@ import anthropic
 
 log = logging.getLogger(__name__)
 
+# Thinking tokens count toward the budget on mimo models.
+SUMMARY_MAX_TOKENS = 8192
+
 
 def generate_summary(
     papers: list[dict],
@@ -92,9 +95,11 @@ def _call_llm(prompt: str, model: str, api_key: str, base_url: str | None) -> st
     client = anthropic.Anthropic(**kwargs)
     message = client.messages.create(
         model=model,
-        max_tokens=2048,
+        max_tokens=SUMMARY_MAX_TOKENS,
         messages=[{"role": "user", "content": prompt}],
     )
+    if message.stop_reason == "max_tokens":
+        log.warning("Summary LLM response truncated (hit max_tokens=%d)", SUMMARY_MAX_TOKENS)
     for block in message.content:
         if block.type == "text":
             return block.text
