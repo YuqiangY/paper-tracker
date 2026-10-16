@@ -120,3 +120,27 @@ def test_html_stage_skips_prefetched_papers(mock_fetch):
     p.html_fetched = True
     _enrich_affiliations_from_arxiv_html([p], timeout=5)
     mock_fetch.assert_not_called()
+
+
+@patch("fetcher.author_enrichment.time.sleep")
+@patch("fetcher.author_enrichment._s2_get")
+def test_h_index_fetch_stops_after_consecutive_failures(mock_get, _sleep, caplog):
+    import urllib.error
+    from fetcher.author_enrichment import _batch_fetch_h_indices, H_INDEX_CIRCUIT_BREAKER
+    mock_get.side_effect = urllib.error.HTTPError("u", 429, "Too Many Requests", {}, None)
+    result = _batch_fetch_h_indices({f"a{i}" for i in range(50)}, api_key=None, timeout=5)
+    assert result == {}
+    assert mock_get.call_count == H_INDEX_CIRCUIT_BREAKER
+    assert "skipping" in caplog.text
+
+
+@patch("fetcher.author_enrichment.time.sleep")
+@patch("fetcher.author_enrichment._s2_get")
+def test_h_index_success_resets_failure_count(mock_get, _sleep):
+    import urllib.error
+    from fetcher.author_enrichment import _batch_fetch_h_indices, H_INDEX_CIRCUIT_BREAKER
+    err = urllib.error.HTTPError("u", 429, "Too Many Requests", {}, None)
+    pattern = ([err] * (H_INDEX_CIRCUIT_BREAKER - 1) + [{"hIndex": 7}]) * 3
+    mock_get.side_effect = pattern
+    result = _batch_fetch_h_indices({f"a{i}" for i in range(len(pattern))}, api_key=None, timeout=5)
+    assert len(result) == 3 and mock_get.call_count == len(pattern)

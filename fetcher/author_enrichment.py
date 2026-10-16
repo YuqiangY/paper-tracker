@@ -14,6 +14,7 @@ log = logging.getLogger(__name__)
 S2_API_BASE = "https://api.semanticscholar.org/graph/v1"
 S2_BATCH_URL = f"{S2_API_BASE}/paper/batch"
 S2_AUTHOR_URL = f"{S2_API_BASE}/author"
+H_INDEX_CIRCUIT_BREAKER = 5
 
 
 def enrich_authors(
@@ -658,13 +659,21 @@ def _batch_fetch_h_indices(
     timeout: int,
 ) -> dict[str, int]:
     result = {}
-    for author_id in author_ids:
+    consecutive_failures = 0
+    for idx, author_id in enumerate(author_ids):
+        if consecutive_failures >= H_INDEX_CIRCUIT_BREAKER:
+            # Unkeyed S2 rate-limits for hours; each author would otherwise cost ~1 min of retries.
+            log.warning("S2 h-index: %d consecutive failures, skipping remaining %d authors",
+                        consecutive_failures, len(author_ids) - idx)
+            break
         try:
             url = f"{S2_AUTHOR_URL}/{author_id}"
             data = _s2_get(url, params={"fields": "hIndex"}, api_key=api_key, timeout=timeout)
+            consecutive_failures = 0
             if data and "hIndex" in data and data["hIndex"] is not None:
                 result[author_id] = data["hIndex"]
         except Exception as e:
+            consecutive_failures += 1
             log.debug("S2 author fetch failed for %s: %s", author_id, e)
         time.sleep(0.1)
     return result
