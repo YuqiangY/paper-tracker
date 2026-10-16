@@ -64,7 +64,7 @@ def stage_fetch(config: dict, since_date: str, report: RunReport) -> list[Paper]
                     report.warnings.append(f"arXiv {cat} 达到翻页上限（{st.note}），窗口内较早的论文未抓取")
                     continue
                 report.arxiv_complete = False
-                report.warnings.append(f"arXiv {cat} 抓取不完整（{st.note}），本次不推进运行状态")
+                report.alerts.append(f"arXiv {cat} 抓取不完整（{st.note}），下次运行自动补抓")
             log.info("arXiv returned %d papers", len(arxiv_papers))
             all_papers.extend(arxiv_papers)
         except Exception as e:
@@ -100,7 +100,12 @@ def stage_fetch(config: dict, since_date: str, report: RunReport) -> list[Paper]
                     api_key=os.environ.get("SEMANTIC_SCHOLAR_API_KEY"),
                     timeout=config.get("enrichment", {}).get("timeout", 10),
                 )
-                log.info("S2 search returned %d papers", len(s2_papers))
+                # S2 search is not date-ordered; keep only papers inside the arXiv window.
+                # Year-only dates ("2026") sort before any full date and are dropped too.
+                fetched_count = len(s2_papers)
+                s2_papers = [p for p in s2_papers if p.published >= since_date]
+                log.info("S2 search returned %d papers, %d within window since %s",
+                         fetched_count, len(s2_papers), since_date)
                 report.source_counts["S2"] = len(s2_papers)
                 all_papers.extend(s2_papers)
         except Exception as e:
@@ -149,7 +154,8 @@ def stage_filter(
         return []
 
     timeout = config.get("enrichment", {}).get("timeout", 10)
-    report.html_count = attach_paper_contexts(kw_papers, timeout=timeout)
+    html_delay_s = config.get("enrichment", {}).get("html_delay_s", 1.0)
+    report.html_count = attach_paper_contexts(kw_papers, timeout=timeout, delay_s=html_delay_s)
 
     llm_kwargs = {
         "model": fcfg["llm_model"],
@@ -323,7 +329,7 @@ def stage_notify(config: dict, report: RunReport, summary_text: str, paper_count
         paper_count=paper_count,
         pages_url=f"{pages_base}/{today}.html" if pages_base and paper_count else "",
         status_lines=report.status_lines(),
-        is_alert=report.is_failed,
+        is_alert=report.is_alert,
     )
 
 

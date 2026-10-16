@@ -23,11 +23,17 @@ class RunReport:
     feishu_doc: str = "skipped"
     deploy: str = "skipped"
     errors: list[str] = field(default_factory=list)
+    # Problems that turn the bot header red but still let the run publish.
+    alerts: list[str] = field(default_factory=list)
     warnings: list[str] = field(default_factory=list)
 
     @property
     def is_failed(self) -> bool:
         return bool(self.errors)
+
+    @property
+    def is_alert(self) -> bool:
+        return bool(self.errors or self.alerts)
 
     def status_lines(self) -> list[str]:
         sources = " | ".join(f"{name} {n}" for name, n in self.source_counts.items())
@@ -38,6 +44,6 @@ class RunReport:
         if self.dropped_by_cap:
             funnel += "（截断: " + ", ".join(f"{a} -{n}" for a, n in self.dropped_by_cap.items()) + "）"
         lines = [f"来源: {sources}", funnel, f"输出: 网页 {self.deploy} | 飞书文档 {self.feishu_doc}"]
-        lines.extend(f"⚠️ {w}" for w in self.warnings)
+        lines.extend(f"⚠️ {w}" for w in self.alerts + self.warnings)
         lines.extend(f"❌ {e}" for e in self.errors)
         return lines

@@ -89,7 +89,7 @@ def test_state_not_saved_when_arxiv_incomplete(mock_arxiv, *_):
     mock_arxiv.return_value = ([_paper()], {"cs.CV": CategoryStats(1, False, "empty page at start=200")})
     with tempfile.TemporaryDirectory() as tmpdir:
         report = _run(tmpdir)
-        assert any("cs.CV" in w for w in report.warnings)
+        assert any("cs.CV" in a for a in report.alerts)
         assert not os.path.exists(os.path.join(tmpdir, "state.json"))
 
 
@@ -199,3 +199,39 @@ def test_warns_when_retry_queue_is_full(mock_arxiv, *_):
         db.close()
         report = _run(tmpdir, config=config)
         assert any("重试队列" in w for w in report.warnings)
+
+
+@patch("main.attach_paper_contexts", return_value=0)
+@patch("main.summarize_papers", side_effect=_summarize)
+@patch("main.score_papers", side_effect=_score_all)
+@patch("main.fetch_s2_search")
+@patch("main.fetch_arxiv")
+def test_s2_papers_older_than_cutoff_are_dropped(mock_arxiv, mock_s2, *_):
+    mock_arxiv.return_value = ([_paper()], {"cs.CV": CategoryStats(1, True)})
+    old, fresh, yearonly = _paper("s2old"), _paper("s2new"), _paper("s2year")
+    old.published, fresh.published, yearonly.published = "2026-03-14", date.today().isoformat(), "2026"
+    mock_s2.return_value = [old, fresh, yearonly]
+    with tempfile.TemporaryDirectory() as tmpdir:
+        config = _config(tmpdir)
+        config["sources"]["s2_search"]["enabled"] = True
+        report = _run(tmpdir, config=config)
+        assert report.source_counts["S2"] == 1
+        assert report.new_count == 2
+
+
+@patch("main.attach_paper_contexts", return_value=0)
+@patch("main.summarize_papers", side_effect=_summarize)
+@patch("main.score_papers", side_effect=_score_all)
+@patch("main.fetch_arxiv")
+def test_incomplete_arxiv_is_alert_but_still_outputs(mock_arxiv, *_):
+    mock_arxiv.return_value = ([_paper()], {"cs.CV": CategoryStats(1, False, "error: HTTP Error 429")})
+    with tempfile.TemporaryDirectory() as tmpdir:
+        report = _run(tmpdir)
+        assert report.is_alert and not report.is_failed
+        assert report.selected_count == 1
+
+
+def test_config_threshold_and_html_delay():
+    config = load_config("config.yaml")
+    assert config["filter"]["llm_relevance_threshold"] == 70
+    assert config["enrichment"]["html_delay_s"] == 1.0

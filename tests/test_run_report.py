@@ -23,3 +23,13 @@ def test_errors_and_warnings_rendered():
     lines = r.status_lines()
     assert "⚠️ arXiv cs.AI 不完整" in lines and "❌ arXiv 返回 0 篇" in lines
     assert r.is_failed is True
+
+
+def test_alert_when_warning_marks_alert():
+    r = RunReport(date="d")
+    r.alerts.append("arXiv cs.CV 抓取不完整")
+    assert r.is_alert and not r.is_failed
+    assert "⚠️ arXiv cs.CV 抓取不完整" in r.status_lines()
+    r2 = RunReport(date="d")
+    r2.errors.append("x")
+    assert r2.is_alert and r2.is_failed
