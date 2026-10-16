@@ -235,3 +235,20 @@ def test_config_threshold_and_html_delay():
     config = load_config("config.yaml")
     assert config["filter"]["llm_relevance_threshold"] == 70
     assert config["enrichment"]["html_delay_s"] == 1.0
+
+
+@patch("main.attach_paper_contexts", return_value=0)
+@patch("main.summarize_papers", side_effect=_summarize)
+@patch("main.score_papers", side_effect=_score_all)
+@patch("main.fetch_arxiv")
+def test_run_date_override_labels_outputs(mock_arxiv, *_):
+    mock_arxiv.return_value = ([_paper()], {"cs.CV": CategoryStats(1, True)})
+    with tempfile.TemporaryDirectory() as tmpdir:
+        report = _run(tmpdir, run_date="2026-10-15")
+        assert report.date == "2026-10-15"
+        assert os.path.exists(os.path.join(tmpdir, "daily", "2026-10-15.json"))
+        assert os.path.exists(os.path.join(tmpdir, "site", "2026-10-15.html"))
+        from storage.db import PaperDB
+        db = PaperDB(os.path.join(tmpdir, "p.db"))
+        assert [r["id"] for r in db.get_papers_by_date("2026-10-15")] == ["2610.00001"]
+        db.close()

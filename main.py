@@ -362,7 +362,9 @@ def run_pipeline(
     site_dir: str | None = None,
     state_path: str | None = None,
     publish: bool = True,
+    run_date: str | None = None,
 ) -> RunReport:
+    """run_date (YYYY-MM-DD) relabels outputs, e.g. to redo a past day's report."""
     resolved = _resolve_paths(config)
     data_dir = data_dir or resolved[0]
     db_path = db_path or resolved[1]
@@ -371,7 +373,7 @@ def run_pipeline(
     os.makedirs(data_dir, exist_ok=True)
     os.makedirs(site_dir, exist_ok=True)
 
-    today = date.today().isoformat()
+    today = date.fromisoformat(run_date).isoformat() if run_date else date.today().isoformat()
     started = datetime.now(timezone.utc)
     report = RunReport(date=today)
     summary_text = ""
@@ -558,6 +560,8 @@ def main():
     parser.add_argument("--state-file", default=None, help="Run state JSON (default next to DB)")
     parser.add_argument("--no-publish", action="store_true",
                         help="Skip deploy, Feishu doc and bot message (for trial runs)")
+    parser.add_argument("--run-date", default=None,
+                        help="Label this run's outputs with YYYY-MM-DD (default: today)")
     subparsers = parser.add_subparsers(dest="command")
     subparsers.add_parser("fetch", help="Fetch papers and dedup into DB")
     subparsers.add_parser("filter", help="Run keyword + LLM filtering on today's raw data")
@@ -590,7 +594,7 @@ def main():
     else:
         report = run_pipeline(
             config, data_dir=args.data_dir, db_path=args.db, site_dir=args.site_dir,
-            state_path=args.state_file, publish=not args.no_publish,
+            state_path=args.state_file, publish=not args.no_publish, run_date=args.run_date,
         )
         sys.exit(1 if report.is_failed else 0)
 
