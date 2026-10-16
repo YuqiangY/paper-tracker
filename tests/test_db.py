@@ -224,3 +224,17 @@ def test_score_migration_runs_once():
         assert hi["filter_status"] == STATUS_SCORED
         assert null["relevance_score"] is None and null["filter_status"] is None
         assert [r["id"] for r in db.get_papers_by_date("2026-10-09")] == ["old-hi"]
+
+
+def test_requeue_scored_resets_selection_for_retry():
+    with tempfile.TemporaryDirectory() as tmpdir:
+        db = PaperDB(os.path.join(tmpdir, "test.db"))
+        for i in ("sel", "rej"):
+            db.insert(make_paper(i))
+        db.update_scores(_scored(make_paper("sel")))
+        db.mark_selected(["sel"], "2026-10-16")
+        db.set_filter_status(["rej"], STATUS_KEYWORD_REJECTED)
+        db.requeue_scored(["sel", "rej"])
+        sel, rej = db.get("sel"), db.get("rej")
+        assert (sel["filter_status"], sel["selected"], sel["selected_on"]) == (STATUS_SCORE_FAILED, 0, None)
+        assert rej["filter_status"] == STATUS_KEYWORD_REJECTED

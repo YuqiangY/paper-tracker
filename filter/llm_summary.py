@@ -45,8 +45,13 @@ async def _summarize_batches(batches, interests, model, api_key, base_url):
         async with semaphore:
             prompt = _build_prompt(batch, interests)
             for _ in range(PARSE_ATTEMPTS):
-                entries = parse_json_array(await call_llm_async(
-                    prompt, model=model, api_key=api_key, base_url=base_url, system=SYSTEM_MESSAGE))
+                try:
+                    text = await call_llm_async(prompt, model=model, api_key=api_key,
+                                                base_url=base_url, system=SYSTEM_MESSAGE)
+                except Exception as e:  # noqa: BLE001 - a failed batch is retried as missing
+                    log.warning("Stage B batch failed: %s", e)
+                    return
+                entries = parse_json_array(text)
                 if entries:
                     _apply(batch, entries)
                     return

@@ -140,3 +140,62 @@ def test_no_publish_skips_bot(mock_arxiv, mock_bot):
         config["output"]["feishu_bot"]["enabled"] = True
         _run(tmpdir, config=config, publish=False)
         mock_bot.assert_not_called()
+
+
+@patch("main.attach_paper_contexts", return_value=0)
+@patch("main.summarize_papers", side_effect=_summarize)
+@patch("main.score_papers", side_effect=_score_all)
+@patch("main.fetch_arxiv")
+def test_output_crash_requeues_selected_papers(mock_arxiv, *_):
+    mock_arxiv.return_value = ([_paper()], {"cs.CV": CategoryStats(1, True)})
+    with tempfile.TemporaryDirectory() as tmpdir:
+        with patch("main.stage_output", side_effect=RuntimeError("disk full")):
+            first = _run(tmpdir)
+        assert first.is_failed
+        second = _run(tmpdir)
+        assert second.retry_count == 1 and second.selected_count == 1
+
+
+@patch("main.send_daily_bot_message", return_value=True)
+@patch("main.PaperDB", side_effect=OSError("database is locked"))
+def test_db_open_failure_still_sends_alert(_db, mock_bot):
+    with tempfile.TemporaryDirectory() as tmpdir:
+        config = _config(tmpdir)
+        config["output"]["feishu_bot"]["enabled"] = True
+        with patch.dict(os.environ, {config["output"]["feishu_bot"]["webhook_url_env"]: "http://hook"}):
+            report = _run(tmpdir, config=config)
+        assert report.is_failed
+        assert mock_bot.call_args.kwargs["is_alert"] is True
+
+
+@patch("main.attach_paper_contexts", return_value=0)
+@patch("main.summarize_papers", side_effect=_summarize)
+@patch("main.score_papers", side_effect=_score_all)
+@patch("main.fetch_arxiv")
+def test_clamped_window_hitting_max_pages_still_advances_state(mock_arxiv, *_):
+    mock_arxiv.return_value = ([_paper()], {"cs.CV": CategoryStats(1, False, "hit max_pages=60")})
+    with tempfile.TemporaryDirectory() as tmpdir:
+        state = os.path.join(tmpdir, "state.json")
+        save_run_state(state, datetime(2026, 1, 1, tzinfo=timezone.utc), {})
+        report = _run(tmpdir)
+        assert any("max_pages" in w for w in report.warnings)
+        with open(state) as f:
+            assert json.load(f)["last_success_utc"] != "2026-01-01T00:00:00+00:00"
+
+
+@patch("main.attach_paper_contexts", return_value=0)
+@patch("main.summarize_papers", side_effect=_summarize)
+@patch("main.score_papers", side_effect=_score_all)
+@patch("main.fetch_arxiv")
+def test_warns_when_retry_queue_is_full(mock_arxiv, *_):
+    mock_arxiv.return_value = ([_paper()], {"cs.CV": CategoryStats(1, True)})
+    with tempfile.TemporaryDirectory() as tmpdir:
+        config = _config(tmpdir)
+        config["filter"]["retry_limit"] = 1
+        from storage.db import PaperDB
+        db = PaperDB(os.path.join(tmpdir, "p.db"))
+        for pid in ("2610.00090", "2610.00091"):
+            db.insert(_paper(pid))
+        db.close()
+        report = _run(tmpdir, config=config)
+        assert any("重试队列" in w for w in report.warnings)

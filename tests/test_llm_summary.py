@@ -29,3 +29,17 @@ def test_summaries_applied_and_missing_retried(mock_call):
     assert papers[0].tags == ["sr"]
     assert missing == 1
     assert "We conclude." in calls[0]
+
+
+@patch("filter.llm_summary.call_llm_async")
+def test_api_error_in_one_batch_does_not_raise(mock_call):
+    async def fake(prompt, **kw):
+        if "T1" in prompt:
+            raise RuntimeError("529 overloaded")
+        ids = [line[4:] for line in prompt.splitlines() if line.startswith("ID: ")]
+        return json.dumps([{"paper_id": i, "summary_zh": "s", "why_relevant": "r", "tags": []} for i in ids])
+    mock_call.side_effect = fake
+    papers = [_p("1"), _p("2")]
+    missing = summarize_papers(papers, INTERESTS, model="m", api_key="k", base_url=None, batch_size=1)
+    assert missing == 1
+    assert papers[1].summary_zh == "s"

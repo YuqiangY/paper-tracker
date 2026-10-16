@@ -97,8 +97,12 @@ async def _score_batches(batches, interests, model, api_key, base_url):
         async with semaphore:
             prompt = build_scoring_prompt(batch, interests)
             for attempt in range(PARSE_ATTEMPTS):
-                text = await call_llm_async(prompt, model=model, api_key=api_key,
-                                            base_url=base_url, system=SYSTEM_MESSAGE)
+                try:
+                    text = await call_llm_async(prompt, model=model, api_key=api_key,
+                                                base_url=base_url, system=SYSTEM_MESSAGE)
+                except Exception as e:  # noqa: BLE001 - a failed batch is retried as missing
+                    log.warning("Stage A batch %d/%d failed: %s", idx + 1, len(batches), e)
+                    return batch, []
                 entries = parse_json_array(text)
                 if entries:
                     return batch, entries

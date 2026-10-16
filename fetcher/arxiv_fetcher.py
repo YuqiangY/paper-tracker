@@ -16,7 +16,8 @@ ARXIV_NS = "http://arxiv.org/schemas/atom"
 OPENSEARCH_NS = "http://a9.com/-/spec/opensearch/1.1/"
 
 PAGE_SIZE = 200
-MAX_PAGES = 30
+MAX_PAGES = 60
+MAX_PAGES_NOTE = "hit max_pages"
 EMPTY_PAGE_RETRIES = 3
 REQUEST_DELAY_S = 3.0
 
@@ -66,7 +67,7 @@ def _fetch_category(
         start += len(entries)
         if entries[-1].published < since_date or start >= total:
             return kept, CategoryStats(len(kept), True)
-    return kept, CategoryStats(len(kept), False, f"hit max_pages={max_pages}")
+    return kept, CategoryStats(len(kept), False, f"{MAX_PAGES_NOTE}={max_pages}")
 
 
 def _fetch_page_with_retry(category: str, start: int, page_size: int) -> tuple[list[Paper], int]:

@@ -95,3 +95,17 @@ def test_garbage_scores_count_as_missing(mock_call):
     mock_call.side_effect = fake
     out = score_papers([_paper("1")], INTERESTS, model="m", api_key="k", base_url=None, batch_size=50)
     assert [p.id for p in out.scored] == ["1"]
+
+
+@patch("filter.llm_scoring.call_llm_async")
+def test_api_error_in_one_batch_keeps_other_batches(mock_call):
+    async def fake(prompt, **kwargs):
+        ids = [line[4:] for line in prompt.splitlines() if line.startswith("ID: ")]
+        if "bad" in ids:
+            raise RuntimeError("529 overloaded")
+        return json.dumps([_entry(i) for i in ids])
+    mock_call.side_effect = fake
+    out = score_papers([_paper("ok"), _paper("bad")], INTERESTS, model="m", api_key="k",
+                       base_url=None, batch_size=1)
+    assert [p.id for p in out.scored] == ["ok"]
+    assert [p.id for p in out.failed] == ["bad"]

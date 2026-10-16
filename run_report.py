@@ -18,6 +18,7 @@ class RunReport:
     summary_missing: int = 0
     other_count: int = 0
     arxiv_complete: bool = True
+    cutoff_clamped: bool = False
     dropped_by_cap: dict[str, int] = field(default_factory=dict)
     feishu_doc: str = "skipped"
     deploy: str = "skipped"

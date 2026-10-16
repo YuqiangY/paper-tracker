@@ -13,6 +13,7 @@ from dotenv import load_dotenv
 
 from models import Paper, papers_to_json, papers_from_json
 from fetcher import fetch_arxiv, fetch_hf_daily, fetch_s2_search, fetch_rss, enrich_authors
+from fetcher.arxiv_fetcher import MAX_PAGES_NOTE
 from fetcher.fulltext import attach_paper_contexts
 from filter.keyword_filter import keyword_filter
 from filter.llm_scoring import score_papers
@@ -56,9 +57,14 @@ def stage_fetch(config: dict, since_date: str, report: RunReport) -> list[Paper]
             arxiv_papers, cat_stats = fetch_arxiv(categories=unique_categories, since_date=since_date)
             report.source_counts["arXiv"] = len(arxiv_papers)
             for cat, st in cat_stats.items():
-                if not st.complete:
-                    report.arxiv_complete = False
-                    report.warnings.append(f"arXiv {cat} 抓取不完整（{st.note}），本次不推进运行状态")
+                if st.complete:
+                    continue
+                if report.cutoff_clamped and st.note.startswith(MAX_PAGES_NOTE):
+                    # Loss is already accepted for a clamped window; blocking state would repeat forever.
+                    report.warnings.append(f"arXiv {cat} 达到翻页上限（{st.note}），窗口内较早的论文未抓取")
+                    continue
+                report.arxiv_complete = False
+                report.warnings.append(f"arXiv {cat} 抓取不完整（{st.note}），本次不推进运行状态")
             log.info("arXiv returned %d papers", len(arxiv_papers))
             all_papers.extend(arxiv_papers)
         except Exception as e:
@@ -362,23 +368,28 @@ def run_pipeline(
     today = date.today().isoformat()
     started = datetime.now(timezone.utc)
     report = RunReport(date=today)
-    fcfg = config["filter"]
-    max_lookback = config["sources"]["arxiv"]["max_lookback_days"]
-    since, clamped = _arxiv_cutoff(config, state_path, started)
-    if clamped:
-        report.warnings.append(
-            f"距上次成功运行超过 {max_lookback} 天，只回补到 {since.date()}，更早的论文可能缺失")
-    log.info("arXiv cutoff: %s", since.isoformat())
-
     summary_text = ""
-    db = PaperDB(db_path)
+    candidates: list[Paper] = []
+    db = None
     try:
+        fcfg = config["filter"]
+        max_lookback = config["sources"]["arxiv"]["max_lookback_days"]
+        since, report.cutoff_clamped = _arxiv_cutoff(config, state_path, started)
+        if report.cutoff_clamped:
+            report.warnings.append(
+                f"距上次成功运行超过 {max_lookback} 天，只回补到 {since.date()}，更早的论文可能缺失")
+        log.info("arXiv cutoff: %s", since.isoformat())
+
+        db = PaperDB(db_path)
         fetched = stage_fetch(config, since.date().isoformat(), report)
         new_papers = stage_dedup(fetched, db)
         retry = db.get_retry_candidates(
             since_iso=(started - timedelta(days=fcfg["retry_window_days"])).isoformat(),
             before_iso=started.isoformat(), limit=fcfg["retry_limit"],
         )
+        if len(retry) >= fcfg["retry_limit"]:
+            report.warnings.append(
+                f"重试队列已满（{fcfg['retry_limit']} 篇），更早的待打分论文顺延到下次")
         new_ids = {p.id for p in new_papers}
         candidates = new_papers + [p for p in retry if p.id not in new_ids]
         report.new_count, report.retry_count = len(candidates), len(candidates) - len(new_papers)
@@ -400,8 +411,12 @@ def run_pipeline(
     except Exception as e:  # noqa: BLE001 - surface in the bot message instead of dying silently
         log.exception("Pipeline crashed")
         report.errors.append(f"流程异常中断: {e}")
+        if db is not None and candidates:
+            db.requeue_scored([p.id for p in candidates])
+            log.info("Re-queued this run's scored papers for the next run")
     finally:
-        db.close()
+        if db is not None:
+            db.close()
 
     if publish:
         stage_notify(config, report, summary_text, report.selected_count, today)

@@ -191,6 +191,15 @@ class PaperDB:
         )
         self.conn.commit()
 
+    def requeue_scored(self, paper_ids: list[str]):
+        """Undo this run's scoring/selection so the papers are retried next run."""
+        self.conn.executemany(
+            """UPDATE papers SET filter_status = ?, selected = 0, selected_on = NULL
+               WHERE id = ? AND filter_status = ?""",
+            [(STATUS_SCORE_FAILED, pid, STATUS_SCORED) for pid in paper_ids],
+        )
+        self.conn.commit()
+
     def get_retry_candidates(self, since_iso: str, before_iso: str, limit: int) -> list[Paper]:
         rows = self.conn.execute(
             """SELECT * FROM papers
