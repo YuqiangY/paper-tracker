@@ -88,8 +88,9 @@ def test_paper_enriched_properties():
     )
     assert p.max_h_index == 60
     assert p.first_author_h_index == 45
-    assert "(MIT)" in p.authors_display[0]
+    assert p.authors_display[0] == "A [h=45]"
     assert "[h=60]" in p.authors_display[1]
+    assert p.affiliations_unique == ["MIT", "Stanford"]
 
 
 def test_paper_authors_display_fallback():

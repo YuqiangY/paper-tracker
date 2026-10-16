@@ -98,7 +98,13 @@ def test_parse_hf_response_no_ai_keywords():
 
 @patch("fetcher.hf_daily_fetcher._query_hf_api")
 def test_fetch_hf_daily_integration(mock_api):
-    mock_api.return_value = SAMPLE_HF_RESPONSE
+    import copy
+    from datetime import datetime, timezone
+    today = datetime.now(timezone.utc).strftime("%Y-%m-%dT00:00:00.000Z")
+    sample = copy.deepcopy(SAMPLE_HF_RESPONSE)
+    for entry in sample:
+        entry["publishedAt"] = today
+    mock_api.return_value = sample
     papers = fetch_hf_daily(lookback_days=30)
     assert len(papers) == 3
     mock_api.assert_called_once()

@@ -295,6 +295,8 @@ def run_pipeline(
     data_dir = data_dir or resolved[0]
     db_path = db_path or resolved[1]
     site_dir = site_dir or resolved[2]
+    os.makedirs(data_dir, exist_ok=True)
+    os.makedirs(site_dir, exist_ok=True)
 
     db = PaperDB(db_path)
     try:

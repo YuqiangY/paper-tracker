@@ -71,12 +71,14 @@ def test_get_unpushed_feishu():
 
 
 def test_get_papers_by_date():
+    from datetime import datetime, timezone
     with tempfile.TemporaryDirectory() as tmpdir:
         db = PaperDB(os.path.join(tmpdir, "test.db"))
         p = make_paper()
         db.insert(p)
         db.update_filter_result(p.id, 8.0, "底层视觉", "摘要", "reason", ["tag"])
-        papers = db.get_papers_by_date("2026-04-17", min_score=7.0)
+        today_utc = datetime.now(timezone.utc).date().isoformat()
+        papers = db.get_papers_by_date(today_utc, min_score=7.0)
         assert len(papers) == 1
         assert papers[0]["id"] == "2404.12345"
 

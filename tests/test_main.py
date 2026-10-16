@@ -15,10 +15,12 @@ def test_load_config():
     assert len(config["interests"]) >= 1
 
 
+@patch("main.fetch_s2_search", return_value=[])
+@patch("main.fetch_hf_daily", return_value=[])
 @patch("main.fetch_arxiv")
 @patch("main.fetch_rss")
 @patch("main.llm_filter")
-def test_run_pipeline_saves_json(mock_llm, mock_rss, mock_arxiv):
+def test_run_pipeline_saves_json(mock_llm, mock_rss, mock_arxiv, _hf, _s2):
     from models import Paper
 
     test_paper = Paper(
@@ -43,6 +45,10 @@ def test_run_pipeline_saves_json(mock_llm, mock_rss, mock_arxiv):
     with tempfile.TemporaryDirectory() as tmpdir:
         config = load_config("config.yaml")
         config["output"]["html"]["output_dir"] = os.path.join(tmpdir, "site")
+        config["output"]["html"]["deploy_cmd"] = ""
+        config["output"]["feishu"]["enabled"] = False
+        config["output"]["feishu_bot"]["enabled"] = False
+        config["summary"]["enabled"] = False
         data_dir = os.path.join(tmpdir, "data", "daily")
         db_path = os.path.join(tmpdir, "papers.db")
 
@@ -62,11 +68,13 @@ def test_run_pipeline_saves_json(mock_llm, mock_rss, mock_arxiv):
         assert len(html_files) >= 1
 
 
+@patch("main.fetch_s2_search", return_value=[])
+@patch("main.fetch_hf_daily", return_value=[])
 @patch("main.fetch_arxiv")
 @patch("main.fetch_rss")
 @patch("main.llm_filter")
 @patch("main.enrich_authors")
-def test_run_pipeline_with_enrichment(mock_enrich, mock_llm, mock_rss, mock_arxiv):
+def test_run_pipeline_with_enrichment(mock_enrich, mock_llm, mock_rss, mock_arxiv, _hf, _s2):
     test_paper = Paper(
         id="2404.12345",
         title="Test SR Paper",
@@ -92,6 +100,10 @@ def test_run_pipeline_with_enrichment(mock_enrich, mock_llm, mock_rss, mock_arxi
         config = load_config("config.yaml")
         config["enrichment"] = {"enabled": True, "timeout": 10, "max_authors_per_paper": 5}
         config["output"]["html"]["output_dir"] = os.path.join(tmpdir, "site")
+        config["output"]["html"]["deploy_cmd"] = ""
+        config["output"]["feishu"]["enabled"] = False
+        config["output"]["feishu_bot"]["enabled"] = False
+        config["summary"]["enabled"] = False
         data_dir = os.path.join(tmpdir, "data", "daily")
         db_path = os.path.join(tmpdir, "papers.db")
 

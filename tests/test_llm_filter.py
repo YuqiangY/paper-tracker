@@ -90,6 +90,8 @@ def test_call_claude_skips_thinking_blocks(mock_anthropic):
 
     mock_msg = MagicMock()
     mock_msg.content = [thinking_block, text_block]
+    mock_msg.usage.input_tokens = 10
+    mock_msg.usage.output_tokens = 10
     mock_anthropic.Anthropic.return_value.messages.create.return_value = mock_msg
 
     result = _call_claude("test prompt", "model", "key", None)
@@ -105,15 +107,17 @@ def test_call_claude_returns_empty_if_no_text_block(mock_anthropic):
 
     mock_msg = MagicMock()
     mock_msg.content = [thinking_block]
+    mock_msg.usage.input_tokens = 10
+    mock_msg.usage.output_tokens = 10
     mock_anthropic.Anthropic.return_value.messages.create.return_value = mock_msg
 
     result = _call_claude("test prompt", "model", "key", None)
     assert result == ""
 
 
-@patch("filter.llm_filter._call_claude")
+@patch("filter.llm_filter._call_claude_async")
 def test_llm_filter_end_to_end(mock_call):
-    mock_call.return_value = json.dumps([
+    response = json.dumps([
         {
             "paper_id": "2404.12345",
             "relevance_score": 8,
@@ -131,6 +135,10 @@ def test_llm_filter_end_to_end(mock_call):
             "tags": [],
         },
     ])
+
+    async def fake(*args, **kwargs):
+        return response
+    mock_call.side_effect = fake
     papers = [
         _paper("2404.12345", "SR Paper", "About SR"),
         _paper("2404.99999", "Other Paper", "Other topic"),
