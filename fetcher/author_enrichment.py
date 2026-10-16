@@ -98,6 +98,24 @@ def enrich_authors(
     return papers
 
 
+def apply_affiliations(paper: Paper, affiliations: list[str | None]) -> None:
+    if not paper.authors_enriched:
+        paper.authors_enriched = [
+            {"name": name, "affiliation": None, "h_index": None, "semantic_scholar_id": None}
+            for name in paper.authors
+        ]
+    unique_affils = set(a for a in affiliations if a)
+    is_team_paper = len(unique_affils) == 1 and len(affiliations) < len(paper.authors_enriched)
+    if is_team_paper:
+        inst = next(iter(unique_affils))
+        for entry in paper.authors_enriched:
+            entry["affiliation"] = inst
+    else:
+        for idx, affil in enumerate(affiliations):
+            if idx < len(paper.authors_enriched) and affil:
+                paper.authors_enriched[idx]["affiliation"] = affil
+
+
 def _enrich_affiliations_from_arxiv_html(
     papers: list[Paper],
     timeout: int,
@@ -108,27 +126,18 @@ def _enrich_affiliations_from_arxiv_html(
     llm_pending: list[tuple[Paper, str]] = []
 
     for paper in papers:
+        if paper.html_fetched:
+            # HTML already parsed before scoring; only the LLM fallback is left.
+            if paper.author_raw_text:
+                llm_pending.append((paper, paper.author_raw_text))
+            continue
         try:
             affiliations, raw_text = _fetch_arxiv_html_affiliations(paper.id, timeout)
             if not affiliations:
                 if raw_text:
                     llm_pending.append((paper, raw_text))
                 continue
-            if not paper.authors_enriched:
-                paper.authors_enriched = [
-                    {"name": name, "affiliation": None, "h_index": None, "semantic_scholar_id": None}
-                    for name in paper.authors
-                ]
-            unique_affils = set(a for a in affiliations if a)
-            is_team_paper = len(unique_affils) == 1 and len(affiliations) < len(paper.authors_enriched)
-            if is_team_paper:
-                inst = next(iter(unique_affils))
-                for entry in paper.authors_enriched:
-                    entry["affiliation"] = inst
-            else:
-                for idx, affil in enumerate(affiliations):
-                    if idx < len(paper.authors_enriched) and affil:
-                        paper.authors_enriched[idx]["affiliation"] = affil
+            apply_affiliations(paper, affiliations)
             log.debug("Parsed affiliations for %s from arXiv HTML", paper.id)
         except Exception as e:
             log.debug("Failed to parse arXiv HTML for %s: %s", paper.id, e)
@@ -271,10 +280,12 @@ def _fetch_arxiv_html_affiliations(
     req.add_header("User-Agent", "PaperTracker/1.0")
     with urllib.request.urlopen(req, timeout=timeout) as resp:
         html = resp.read().decode("utf-8")
+    return parse_affiliations_from_soup(BeautifulSoup(html, "html.parser"))
 
-    soup = BeautifulSoup(html, "html.parser")
+
+def parse_affiliations_from_soup(soup: BeautifulSoup) -> tuple[list[str | None], str]:
+    """Return (affiliations_list, raw_author_section_text); see _fetch_arxiv_html_affiliations."""
     authors_div = soup.find("div", class_="ltx_authors")
-
     if authors_div:
         for parse_fn in (
             _parse_structured_affiliations,
@@ -285,12 +296,8 @@ def _fetch_arxiv_html_affiliations(
             result = parse_fn(authors_div)
             if result and any(a is not None for a in result):
                 return result, ""
-
-        raw_text = authors_div.get_text(" ", strip=True)
-        return [], raw_text
-
-    flat = _parse_flat_text_affiliations(soup)
-    return flat, ""
+        return [], authors_div.get_text(" ", strip=True)
+    return _parse_flat_text_affiliations(soup), ""
 
 
 def _parse_structured_affiliations(authors_div: Tag) -> list[str | None]:

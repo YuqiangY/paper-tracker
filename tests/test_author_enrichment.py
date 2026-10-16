@@ -110,3 +110,13 @@ def test_enrich_skips_rss_papers():
     )
     result = enrich_authors([p])
     assert p.authors_enriched is None
+
+
+@patch("fetcher.author_enrichment._fetch_arxiv_html_affiliations")
+def test_html_stage_skips_prefetched_papers(mock_fetch):
+    from fetcher.author_enrichment import _enrich_affiliations_from_arxiv_html
+    p = Paper(id="2610.00001", title="T", authors=["A"], abstract="", url="", source="arxiv",
+              published="", categories=[])
+    p.html_fetched = True
+    _enrich_affiliations_from_arxiv_html([p], timeout=5)
+    mock_fetch.assert_not_called()
