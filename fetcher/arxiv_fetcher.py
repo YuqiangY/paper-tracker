@@ -2,55 +2,107 @@ from __future__ import annotations
 import logging
 import re
 import time
-import urllib.error
-import urllib.request
 import urllib.parse
 import xml.etree.ElementTree as ET
-from datetime import datetime, timedelta, timezone
+from dataclasses import dataclass
 from models import Paper
 from .retry import request_with_retry
 
 log = logging.getLogger(__name__)
 
-ARXIV_API_URL = "http://export.arxiv.org/api/query"
+ARXIV_API_URL = "https://export.arxiv.org/api/query"
 ATOM_NS = "http://www.w3.org/2005/Atom"
 ARXIV_NS = "http://arxiv.org/schemas/atom"
+OPENSEARCH_NS = "http://a9.com/-/spec/opensearch/1.1/"
+
+PAGE_SIZE = 200
+MAX_PAGES = 30
+EMPTY_PAGE_RETRIES = 3
+REQUEST_DELAY_S = 3.0
+
+
+@dataclass(frozen=True)
+class CategoryStats:
+    count: int
+    complete: bool
+    note: str = ""
 
 
 def fetch_arxiv(
     categories: list[str],
-    max_results: int = 100,
-    lookback_days: int = 1,
-) -> list[Paper]:
+    since_date: str,
+    page_size: int = PAGE_SIZE,
+    max_pages: int = MAX_PAGES,
+) -> tuple[list[Paper], dict[str, CategoryStats]]:
     seen: dict[str, Paper] = {}
-    unique_cats = list(dict.fromkeys(categories))
-    cutoff = (datetime.now(timezone.utc) - timedelta(days=lookback_days)).strftime("%Y-%m-%d")
-
-    for cat in unique_cats:
+    stats: dict[str, CategoryStats] = {}
+    for cat in dict.fromkeys(categories):
         try:
-            xml_text = _query_arxiv_api(cat, max_results)
-        except Exception as e:
-            log.warning("arXiv category %s failed: %s, skipping", cat, e)
+            papers, stats[cat] = _fetch_category(cat, since_date, page_size, max_pages)
+        except Exception as e:  # noqa: BLE001 - one category must not abort the rest
+            log.warning("arXiv category %s failed: %s", cat, e)
+            stats[cat] = CategoryStats(count=0, complete=False, note=f"error: {e}")
             continue
-        for paper in _parse_arxiv_response(xml_text):
-            if paper.id not in seen and paper.published >= cutoff:
-                seen[paper.id] = paper
-        time.sleep(3)
+        for p in papers:
+            seen.setdefault(p.id, p)
+        log.info("arXiv %s: %d papers since %s (complete=%s%s)", cat, stats[cat].count,
+                 since_date, stats[cat].complete, f", {stats[cat].note}" if stats[cat].note else "")
+    return list(seen.values()), stats
 
-    return list(seen.values())
+
+def _fetch_category(
+    category: str, since_date: str, page_size: int, max_pages: int,
+) -> tuple[list[Paper], CategoryStats]:
+    kept: list[Paper] = []
+    start = 0
+    for _ in range(max_pages):
+        entries, total = _fetch_page_with_retry(category, start, page_size)
+        if not entries:
+            # Past the reported total is a normal end; anything else is an API glitch.
+            if 0 < total <= start:
+                return kept, CategoryStats(len(kept), True)
+            return kept, CategoryStats(len(kept), False, f"empty page at start={start} (total={total})")
+        kept.extend(p for p in entries if p.published >= since_date)
+        start += len(entries)
+        if entries[-1].published < since_date or start >= total:
+            return kept, CategoryStats(len(kept), True)
+    return kept, CategoryStats(len(kept), False, f"hit max_pages={max_pages}")
 
 
-def _query_arxiv_api(category: str, max_results: int) -> str:
+def _fetch_page_with_retry(category: str, start: int, page_size: int) -> tuple[list[Paper], int]:
+    """arXiv intermittently serves an empty feed; retry before trusting it."""
+    entries: list[Paper] = []
+    total = 0
+    for attempt in range(1 + EMPTY_PAGE_RETRIES):
+        time.sleep(REQUEST_DELAY_S * (attempt + 1))
+        xml_text = _query_arxiv_api(category, start, page_size)
+        entries, total = _parse_arxiv_response(xml_text), _parse_total_results(xml_text)
+        if entries:
+            return entries, total
+        log.warning("arXiv %s returned empty page at start=%d (total=%d), attempt %d",
+                    category, start, total, attempt + 1)
+    return entries, total
+
+
+def _parse_total_results(xml_text: str) -> int:
+    root = ET.fromstring(xml_text)
+    value = root.findtext(f"{{{OPENSEARCH_NS}}}totalResults", "0")
+    try:
+        return int(value.strip())
+    except ValueError:
+        return 0
+
+
+def _query_arxiv_api(category: str, start: int, max_results: int) -> str:
     params = urllib.parse.urlencode({
         "search_query": f"cat:{category}",
-        "start": 0,
+        "start": start,
         "max_results": max_results,
         "sortBy": "submittedDate",
         "sortOrder": "descending",
     })
-    url = f"{ARXIV_API_URL}?{params}"
     data = request_with_retry(
-        url,
+        f"{ARXIV_API_URL}?{params}",
         timeout=60,
         max_attempts=5,
         base_delay=15.0,
