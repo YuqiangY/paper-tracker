@@ -53,3 +53,12 @@ def test_send_api_error(mock_urlopen):
 def test_send_no_webhook():
     result = send_daily_bot_message("", "text", "2026-04-21", 5, "")
     assert result is False
+
+
+def test_card_includes_status_and_alert_header():
+    card = _build_card("", "2026-10-15", 0, "", status_lines=["来源: arXiv 0"], is_alert=True)
+    assert card["header"]["template"] == "red"
+    assert "运行异常" in card["header"]["title"]["content"]
+    contents = [e["text"]["content"] for e in card["elements"] if e.get("tag") == "div"]
+    assert any("来源: arXiv 0" in c for c in contents)
+    assert "" not in contents

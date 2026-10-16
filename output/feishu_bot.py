@@ -13,12 +13,14 @@ def send_daily_bot_message(
     date: str,
     paper_count: int,
     pages_url: str = "",
+    status_lines: list[str] | None = None,
+    is_alert: bool = False,
 ) -> bool:
     if not webhook_url:
         log.warning("Feishu bot webhook URL not configured")
         return False
 
-    card = _build_card(summary_text, date, paper_count, pages_url)
+    card = _build_card(summary_text, date, paper_count, pages_url, status_lines, is_alert)
     payload = json.dumps({"msg_type": "interactive", "card": card}).encode()
 
     req = urllib.request.Request(
@@ -44,23 +46,27 @@ def send_daily_bot_message(
         return False
 
 
-def _build_card(summary_text: str, date: str, paper_count: int, pages_url: str) -> dict:
-    elements = [
-        {
-            "tag": "div",
-            "text": {
-                "tag": "lark_md",
-                "content": summary_text,
-            },
+def _build_card(
+    summary_text: str,
+    date: str,
+    paper_count: int,
+    pages_url: str,
+    status_lines: list[str] | None = None,
+    is_alert: bool = False,
+) -> dict:
+    elements = []
+    if summary_text:
+        elements.append({"tag": "div", "text": {"tag": "lark_md", "content": summary_text}})
+    elements.append({
+        "tag": "div",
+        "text": {
+            "tag": "lark_md",
+            "content": f"共筛选 **{paper_count}** 篇高相关论文",
         },
-        {
-            "tag": "div",
-            "text": {
-                "tag": "lark_md",
-                "content": f"共筛选 **{paper_count}** 篇高相关论文",
-            },
-        },
-    ]
+    })
+    if status_lines:
+        elements.append({"tag": "hr"})
+        elements.append({"tag": "div", "text": {"tag": "lark_md", "content": "\n".join(status_lines)}})
 
     if pages_url:
         elements.append({"tag": "hr"})
@@ -76,10 +82,14 @@ def _build_card(summary_text: str, date: str, paper_count: int, pages_url: str) 
             ],
         })
 
+    if is_alert:
+        title, template = f"⚠️ Paper Tracker 运行异常 — {date}", "red"
+    else:
+        title, template = f"📄 Paper Tracker 今日热点 — {date}", "blue"
     return {
         "header": {
-            "title": {"tag": "plain_text", "content": f"📄 Paper Tracker 今日热点 — {date}"},
-            "template": "blue",
+            "title": {"tag": "plain_text", "content": title},
+            "template": template,
         },
         "elements": elements,
     }

@@ -205,3 +205,30 @@ def test_max_h_index_none():
         ]),
     }
     assert _max_h_index(paper) is None
+
+
+def _run_result(rc, stdout="", stderr=""):
+    m = MagicMock()
+    m.returncode, m.stdout, m.stderr = rc, stdout, stderr
+    return m
+
+
+_ONE_PAPER = [{"title": "T", "url": "u", "relevance_score": 85, "primary_category": "底层视觉",
+               "summary_zh": "s", "tags": "[]", "authors": '["A"]'}]
+
+
+@patch("output.feishu_output.subprocess.run")
+def test_feishu_doc_rc3_with_success_json_is_ok(mock_run):
+    mock_run.return_value = _run_result(3, '{"success": true, "content_written": true, "warnings": ["x"]}')
+    assert generate_feishu_doc(_ONE_PAPER, "2026-10-15") == "ok (with warnings)"
+
+
+@patch("output.feishu_output.subprocess.run")
+def test_feishu_doc_session_expired_is_failed(mock_run):
+    mock_run.return_value = _run_result(1, '{"error": "Session expired (30 days)"}')
+    status = generate_feishu_doc(_ONE_PAPER, "2026-10-15")
+    assert status.startswith("failed: ") and "Session expired" in status
+
+
+def test_feishu_doc_no_papers_skipped():
+    assert generate_feishu_doc([], "2026-10-15") == "skipped"

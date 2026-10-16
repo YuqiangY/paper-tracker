@@ -1,6 +1,7 @@
 from __future__ import annotations
 import json
 import logging
+import os
 import subprocess
 import tempfile
 from collections import Counter
@@ -224,7 +225,7 @@ def generate_feishu_doc(
 ):
     if not papers:
         log.info("No papers to publish to Feishu")
-        return
+        return "skipped"
 
     title = f"论文追踪 {date}"
     markdown = _build_markdown(papers, date)
@@ -245,21 +246,34 @@ def generate_feishu_doc(
             text=True,
             timeout=120,
         )
-        if result.returncode == 0:
-            log.info("Feishu doc created successfully")
-            if result.stdout.strip():
-                log.info("Output: %s", result.stdout.strip()[:500])
-        elif result.returncode == 2:
-            log.warning("Feishu doc created but content write failed: %s", result.stdout.strip()[:500])
+        status = _doc_status(result.returncode, result.stdout, result.stderr)
+        if status.startswith("ok"):
+            log.info("Feishu doc: %s (rc=%d)", status, result.returncode)
         else:
-            detail = result.stderr.strip() or result.stdout.strip()
-            log.warning("Feishu doc creation failed (rc=%d): %s", result.returncode, detail[:500])
+            log.warning("Feishu doc: %s (rc=%d)", status, result.returncode)
+        return status
     except FileNotFoundError:
         log.warning("'feishu' CLI not found. Install via: npm install -g @mi/feishu@latest")
+        return "failed: feishu CLI not found"
     except subprocess.TimeoutExpired:
         log.warning("Feishu doc creation timed out after 120s")
+        return "failed: timeout after 120s"
     except Exception as e:
         log.warning("Feishu doc creation failed: %s", e)
+        return f"failed: {e}"
     finally:
-        import os
         os.unlink(tmp_file.name)
+
+
+def _doc_status(returncode: int, stdout: str, stderr: str) -> str:
+    """The CLI exits non-zero on soft warnings too; trust its JSON 'success' field."""
+    try:
+        body = json.loads(stdout) if stdout.strip() else {}
+    except json.JSONDecodeError:
+        body = {}
+    if not isinstance(body, dict):
+        body = {}
+    if body.get("success") is True or (returncode == 0 and body.get("success") is not False):
+        return "ok (with warnings)" if body.get("warnings") else "ok"
+    detail = body.get("error") or stderr.strip() or stdout.strip() or f"rc={returncode}"
+    return f"failed: {str(detail)[:200]}"
