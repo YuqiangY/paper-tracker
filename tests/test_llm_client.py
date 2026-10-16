@@ -24,6 +24,7 @@ def _block(kind, text=""):
 @patch("filter.llm_client.anthropic")
 def test_call_returns_first_text_block_after_thinking(mock_anthropic):
     client = mock_anthropic.AsyncAnthropic.return_value
+    client.close = AsyncMock()
     client.messages.create = AsyncMock(return_value=_msg([_block("thinking"), _block("text", "[1]")]))
     out = asyncio.run(call_llm_async("p", model="m", api_key="k", base_url=None, system="s"))
     assert out == "[1]"
@@ -32,6 +33,7 @@ def test_call_returns_first_text_block_after_thinking(mock_anthropic):
 @patch("filter.llm_client.anthropic")
 def test_call_warns_on_truncation(mock_anthropic, caplog):
     client = mock_anthropic.AsyncAnthropic.return_value
+    client.close = AsyncMock()
     client.messages.create = AsyncMock(return_value=_msg([_block("text", "[")], stop_reason="max_tokens"))
     asyncio.run(call_llm_async("p", model="m", api_key="k", base_url=None, system="s"))
     assert "truncated" in caplog.text
@@ -47,3 +49,16 @@ def test_parse_plain_and_fenced_and_think_wrapped():
 def test_parse_garbage_returns_empty():
     assert parse_json_array("not json") == []
     assert parse_json_array('{"a": 1}') == []
+
+
+@patch("filter.llm_client.anthropic")
+def test_call_closes_client_even_on_error(mock_anthropic):
+    import pytest
+    client = mock_anthropic.AsyncAnthropic.return_value
+    client.close = AsyncMock()
+    client.messages.create = AsyncMock(return_value=_msg([_block("text", "[]")]))
+    asyncio.run(call_llm_async("p", model="m", api_key="k", base_url=None, system="s"))
+    client.messages.create = AsyncMock(side_effect=RuntimeError("529"))
+    with pytest.raises(RuntimeError):
+        asyncio.run(call_llm_async("p", model="m", api_key="k", base_url=None, system="s"))
+    assert client.close.await_count == 2

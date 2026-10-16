@@ -26,12 +26,16 @@ async def call_llm_async(
     if base_url:
         kwargs["base_url"] = base_url
     client = anthropic.AsyncAnthropic(**kwargs)
-    message = await client.messages.create(
-        model=model,
-        max_tokens=max_tokens,
-        system=system,
-        messages=[{"role": "user", "content": prompt}],
-    )
+    try:
+        message = await client.messages.create(
+            model=model,
+            max_tokens=max_tokens,
+            system=system,
+            messages=[{"role": "user", "content": prompt}],
+        )
+    finally:
+        # Close inside this event loop; a GC'd client would try after asyncio.run() closed it.
+        await client.close()
     log.info("LLM tokens: input=%d, output=%d", message.usage.input_tokens, message.usage.output_tokens)
     if message.stop_reason == "max_tokens":
         log.warning("LLM response truncated (hit max_tokens=%d)", max_tokens)
