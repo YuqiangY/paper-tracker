@@ -86,4 +86,5 @@ def test_parse_real_stage_b_output_file_if_present():
     if not os.path.exists(path):
         return
     with open(path) as f:
-        assert len(parse_json_array(f.read())) == 20
+        # The model itself repeated one paper_id in that output (21 objects, 20 ids).
+        assert len({d["paper_id"] for d in parse_json_array(f.read())}) == 20
