@@ -15,6 +15,8 @@ S2_API_BASE = "https://api.semanticscholar.org/graph/v1"
 S2_BATCH_URL = f"{S2_API_BASE}/paper/batch"
 S2_AUTHOR_URL = f"{S2_API_BASE}/author"
 H_INDEX_CIRCUIT_BREAKER = 5
+# Wall-clock cap for per-author h-index lookups; unkeyed S2 can stall a run for hours.
+H_INDEX_BUDGET_S = 600.0
 
 
 def enrich_authors(
@@ -25,6 +27,7 @@ def enrich_authors(
     llm_api_key: str = "",
     llm_base_url: str | None = None,
     llm_model: str = "",
+    h_index_budget_s: float = H_INDEX_BUDGET_S,
 ) -> list[Paper]:
     arxiv_papers = [p for p in papers if not p.id.startswith("rss:")]
     if not arxiv_papers:
@@ -66,7 +69,7 @@ def enrich_authors(
             if s2_author.get("authorId"):
                 author_ids_to_fetch.add(s2_author["authorId"])
 
-    h_index_map = _batch_fetch_h_indices(author_ids_to_fetch, api_key, timeout)
+    h_index_map = _batch_fetch_h_indices(author_ids_to_fetch, api_key, timeout, budget_s=h_index_budget_s)
 
     for paper in arxiv_papers:
         s2_data = paper_s2_data.get(paper.id)
@@ -657,10 +660,16 @@ def _batch_fetch_h_indices(
     author_ids: set[str],
     api_key: str | None,
     timeout: int,
+    budget_s: float = H_INDEX_BUDGET_S,
 ) -> dict[str, int]:
     result = {}
     consecutive_failures = 0
+    deadline = time.monotonic() + budget_s
     for idx, author_id in enumerate(author_ids):
+        if time.monotonic() >= deadline:
+            log.warning("S2 h-index: time budget of %.0fs used up, skipping remaining %d authors "
+                        "(%d h-indices fetched)", budget_s, len(author_ids) - idx, len(result))
+            break
         if consecutive_failures >= H_INDEX_CIRCUIT_BREAKER:
             # Unkeyed S2 rate-limits for hours; each author would otherwise cost ~1 min of retries.
             log.warning("S2 h-index: %d consecutive failures, skipping remaining %d authors",

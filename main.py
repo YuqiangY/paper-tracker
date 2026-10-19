@@ -210,6 +210,7 @@ def stage_enrich(papers: list[Paper], config: dict, db: PaperDB) -> list[Paper]:
                 api_key=s2_api_key,
                 timeout=enrichment_cfg.get("timeout", 10),
                 max_authors_per_paper=enrichment_cfg.get("max_authors_per_paper", 5),
+                h_index_budget_s=enrichment_cfg.get("h_index_budget_s", 600),
                 llm_api_key=llm_api_key,
                 llm_base_url=llm_base_url,
                 llm_model=llm_model,

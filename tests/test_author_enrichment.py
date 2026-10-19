@@ -144,3 +144,30 @@ def test_h_index_success_resets_failure_count(mock_get, _sleep):
     mock_get.side_effect = pattern
     result = _batch_fetch_h_indices({f"a{i}" for i in range(len(pattern))}, api_key=None, timeout=5)
     assert len(result) == 3 and mock_get.call_count == len(pattern)
+
+
+@patch("fetcher.author_enrichment.time.sleep")
+@patch("fetcher.author_enrichment.time.monotonic")
+@patch("fetcher.author_enrichment._s2_get", return_value={"hIndex": 3})
+def test_h_index_fetch_stops_at_time_budget(mock_get, mock_clock, _sleep, caplog):
+    from fetcher.author_enrichment import _batch_fetch_h_indices
+    mock_clock.side_effect = [0, 0, 100, 200, 601, 700, 800]
+    result = _batch_fetch_h_indices({f"a{i}" for i in range(6)}, api_key=None, timeout=5, budget_s=600)
+    assert len(result) == 3
+    assert mock_get.call_count == 3
+    assert "time budget" in caplog.text
+
+
+@patch("main.enrich_authors", side_effect=lambda papers, **kw: papers)
+def test_stage_enrich_passes_h_index_budget(mock_enrich):
+    import tempfile, os
+    from main import load_config, stage_enrich
+    from storage.db import PaperDB
+    config = load_config("config.yaml")
+    with tempfile.TemporaryDirectory() as tmpdir:
+        db = PaperDB(os.path.join(tmpdir, "p.db"))
+        p = Paper(id="2610.00001", title="T", authors=["A"], abstract="", url="", source="arxiv",
+                  published="", categories=[])
+        stage_enrich([p], config, db)
+        db.close()
+    assert mock_enrich.call_args.kwargs["h_index_budget_s"] == 600
