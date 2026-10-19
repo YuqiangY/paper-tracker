@@ -43,3 +43,8 @@ def test_api_error_in_one_batch_does_not_raise(mock_call):
     missing = summarize_papers(papers, INTERESTS, model="m", api_key="k", base_url=None, batch_size=1)
     assert missing == 1
     assert papers[1].summary_zh == "s"
+
+
+def test_prompt_forbids_ascii_quotes_inside_text():
+    from filter.llm_summary import _build_prompt
+    assert "「」" in _build_prompt([_p("1")], INTERESTS)

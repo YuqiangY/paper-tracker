@@ -51,6 +51,8 @@ def parse_json_array(text: str) -> list[dict]:
     match = _FENCE_RE.search(text)
     if match:
         candidates.append(match.group(1).strip())
+    # Last resort: models sometimes put raw ASCII quotes inside Chinese text values.
+    candidates += [_escape_inner_quotes(c) for c in list(candidates)]
     for candidate in candidates:
         try:
             data = json.loads(candidate)
@@ -59,3 +61,33 @@ def parse_json_array(text: str) -> list[dict]:
         if isinstance(data, list):
             return [d for d in data if isinstance(d, dict)]
     return []
+
+
+_CLOSING_FOLLOWERS = set(",:}]")
+
+
+def _escape_inner_quotes(text: str) -> str:
+    """Escape a quote inside a string unless the next non-space char closes the value."""
+    out: list[str] = []
+    in_string = False
+    i = 0
+    while i < len(text):
+        ch = text[i]
+        if in_string and ch == "\\" and i + 1 < len(text):
+            out.append(text[i : i + 2])
+            i += 2
+            continue
+        if ch == '"':
+            if not in_string:
+                in_string = True
+            else:
+                rest = text[i + 1 :].lstrip()
+                if not rest or rest[0] in _CLOSING_FOLLOWERS:
+                    in_string = False
+                else:
+                    out.append('\\"')
+                    i += 1
+                    continue
+        out.append(ch)
+        i += 1
+    return "".join(out)

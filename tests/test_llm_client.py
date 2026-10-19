@@ -62,3 +62,28 @@ def test_call_closes_client_even_on_error(mock_anthropic):
     with pytest.raises(RuntimeError):
         asyncio.run(call_llm_async("p", model="m", api_key="k", base_url=None, system="s"))
     assert client.close.await_count == 2
+
+
+def test_parse_repairs_unescaped_quotes_inside_strings():
+    # Real 2026-10-19 Stage B output: ASCII quotes inside a Chinese summary broke the whole batch.
+    text = (
+        '```json\n[\n  {\n    "paper_id": "2610.23610",\n'
+        '    "summary_zh": "主张幻觉评估应区分"提及"与"断言"。",\n'
+        '    "why_relevant": "Challenges a \\"core\\" assumption.",\n'
+        '    "tags": ["多模态", "评测"]\n  },\n'
+        '  {"paper_id": "2", "summary_zh": "正常", "why_relevant": "ok", "tags": []}\n]\n```'
+    )
+    data = parse_json_array(text)
+    assert [d["paper_id"] for d in data] == ["2610.23610", "2"]
+    assert data[0]["summary_zh"] == '主张幻觉评估应区分"提及"与"断言"。'
+    assert data[0]["why_relevant"] == 'Challenges a "core" assumption.'
+    assert data[0]["tags"] == ["多模态", "评测"]
+
+
+def test_parse_real_stage_b_output_file_if_present():
+    import os
+    path = "/tmp/pt-stageb/raw.txt"
+    if not os.path.exists(path):
+        return
+    with open(path) as f:
+        assert len(parse_json_array(f.read())) == 20

@@ -90,7 +90,7 @@ For each paper return a JSON array with one object per paper:
 [{{"paper_id": "<ID>", "summary_zh": "<一句话中文摘要，说明做了什么、效果如何>",
   "why_relevant": "<brief English reason it matters for its area>", "tags": ["<keyword>", "<keyword>"]}}]
 
-Return ONLY the JSON array.
+Return ONLY the JSON array. Inside text values never use ASCII double quotes; quote terms with 「」 instead.
 
 Papers:
 
