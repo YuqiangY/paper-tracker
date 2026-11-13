@@ -6,6 +6,12 @@ cd "$(dirname "$0")"
 BRANCH="main"
 MAX_RETRY=3
 
+# Never let a hung SSH session block the pipeline: fail fast on connect,
+# detect dead connections, and hard-bound every network git operation.
+export GIT_SSH_COMMAND="ssh -o ConnectTimeout=10 -o ServerAliveInterval=15 -o ServerAliveCountMax=2"
+PUSH_TIMEOUT=60
+FETCH_TIMEOUT=30
+
 git add site/
 if git diff --cached --quiet; then
     echo "No site changes to deploy."
@@ -17,7 +23,7 @@ git commit -m "update: site $(date +%Y-%m-%d)"
 # Push with retry — tolerate transient network/SSH failures
 push_ok=0
 for attempt in $(seq 1 "$MAX_RETRY"); do
-    if git push origin "$BRANCH"; then
+    if timeout "$PUSH_TIMEOUT" git push origin "$BRANCH"; then
         push_ok=1
         break
     fi
@@ -31,7 +37,7 @@ if [ "$push_ok" -ne 1 ]; then
 fi
 
 # Verify the remote actually received our commit — a 0 exit code is not proof
-git fetch origin "$BRANCH" --quiet
+timeout "$FETCH_TIMEOUT" git fetch origin "$BRANCH" --quiet
 local_head=$(git rev-parse HEAD)
 remote_head=$(git rev-parse "origin/$BRANCH")
 if [ "$local_head" != "$remote_head" ]; then

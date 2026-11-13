@@ -302,14 +302,61 @@ def stage_output(
     return summary_text
 
 
-def _run_deploy(deploy_cmd: str) -> str:
+# deploy.sh worst case: 3 push attempts (60s each) + 2x5s sleeps + 30s verify
+# fetch. Keep the outer budget above that so a slow-but-successful deploy is
+# not killed mid-flight.
+DEPLOY_TIMEOUT_S = 300
+_VERIFY_GIT_TIMEOUT_S = 30
+
+
+def _is_site_deployed(cwd: str = ".") -> bool:
+    """Return True only when site/ is fully committed AND origin/main has it.
+
+    Used to re-check the real deployment state after deploy_cmd failed or
+    timed out, so a hang after a successful push is not reported as a failure.
+    Requires a git-based deploy (deploy.sh pushes site/ to origin/main).
+    """
     try:
-        result = subprocess.run(shlex.split(deploy_cmd), capture_output=True, text=True, timeout=120)
+        dirty = subprocess.run(
+            ["git", "status", "--porcelain", "--", "site/"],
+            capture_output=True, text=True, cwd=cwd, timeout=15, check=True,
+        ).stdout.strip()
+        if dirty:
+            return False
+        subprocess.run(
+            ["git", "fetch", "origin", "main", "--quiet"],
+            capture_output=True, cwd=cwd, timeout=_VERIFY_GIT_TIMEOUT_S, check=True,
+        )
+        local = subprocess.run(
+            ["git", "rev-parse", "HEAD"],
+            capture_output=True, text=True, cwd=cwd, timeout=15, check=True,
+        ).stdout.strip()
+        remote = subprocess.run(
+            ["git", "rev-parse", "origin/main"],
+            capture_output=True, text=True, cwd=cwd, timeout=15, check=True,
+        ).stdout.strip()
+        return local == remote
+    except Exception as e:  # noqa: BLE001
+        log.debug("Post-mortem deploy verification failed: %s", e)
+        return False
+
+
+def _run_deploy(deploy_cmd: str, cwd: str = ".", timeout: int = DEPLOY_TIMEOUT_S) -> str:
+    try:
+        result = subprocess.run(
+            shlex.split(deploy_cmd), capture_output=True, text=True, cwd=cwd, timeout=timeout
+        )
     except Exception as e:  # noqa: BLE001
         log.warning("Deploy command failed: %s", e)
+        if _is_site_deployed(cwd):
+            log.info("Deploy verification: origin/main already has the commit")
+            return f"ok (verified origin despite: {e})"
         return f"failed: {e}"
     if result.returncode != 0:
         log.warning("Deploy failed (rc=%d): %s", result.returncode, result.stderr[:500])
+        if _is_site_deployed(cwd):
+            log.info("Deploy verification: origin/main already has the commit")
+            return f"ok (verified origin despite rc={result.returncode})"
         return f"failed: rc={result.returncode} {result.stderr.strip()[:200]}"
     return "ok"
 
