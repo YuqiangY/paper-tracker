@@ -1,0 +1,5678 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Paper Tracker - 2026-11-19</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+         color: #333; background: #fafafa; }
+
+  .layout { display: flex; max-width: 1200px; margin: 0 auto; }
+
+  /* Sidebar */
+  .sidebar { width: 220px; position: sticky; top: 0; height: 100vh; overflow-y: auto;
+             padding: 20px 16px; border-right: 1px solid #e0e0e0; background: #fff; flex-shrink: 0; }
+  .sidebar h3 { font-size: 0.85em; color: #666; text-transform: uppercase; letter-spacing: 0.5px;
+                margin-bottom: 12px; }
+  .sidebar-nav { list-style: none; }
+  .sidebar-nav li { margin-bottom: 4px; }
+  .sidebar-nav a { display: block; padding: 6px 10px; border-radius: 6px; color: #333;
+                   text-decoration: none; font-size: 0.9em; transition: background 0.15s; }
+  .sidebar-nav a:hover { background: #e8f0fe; }
+  .sidebar-nav a.active { background: #4a90d9; color: #fff; }
+  .sidebar-nav .nav-count { float: right; color: #999; font-size: 0.8em; }
+  .sidebar-nav a.active .nav-count { color: rgba(255,255,255,0.8); }
+  .sidebar-back { display: block; margin-bottom: 20px; color: #4a90d9; text-decoration: none;
+                  font-size: 0.9em; }
+  .sidebar-meta { font-size: 0.8em; color: #999; margin-top: 16px; padding-top: 12px;
+                  border-top: 1px solid #eee; }
+
+  /* Main content */
+  .main { flex: 1; min-width: 0; padding: 24px 32px; }
+
+  h1 { margin-bottom: 8px; font-size: 1.6em; }
+  .meta { color: #666; margin-bottom: 24px; }
+
+  /* Summary section */
+  .summary-section { background: #fff; border: 1px solid #e0e0e0; border-radius: 12px;
+                     padding: 20px 24px; margin-bottom: 28px;
+                     border-left: 4px solid #667eea; }
+  .summary-section h2 { font-size: 1em; color: #667eea; margin-bottom: 12px;
+                         font-weight: 600; letter-spacing: 0.5px; }
+  .summary-section p { margin: 0; line-height: 1.8; color: #444; font-size: 0.92em; }
+  .summary-section strong { color: #2c3e50; }
+
+  /* Category sections */
+  .category { margin-bottom: 32px; }
+  .category h2 { border-bottom: 2px solid #4a90d9; padding-bottom: 6px; margin-bottom: 16px;
+                 color: #2c3e50; font-size: 1.2em; }
+  .paper { background: #fff; border: 1px solid #e0e0e0; border-radius: 8px; padding: 16px;
+           margin-bottom: 12px; }
+  .paper-title { font-size: 1.05em; font-weight: 600; }
+  .paper-title a { color: #1a0dab; text-decoration: none; }
+  .paper-title a:hover { text-decoration: underline; }
+  .score { display: inline-block; background: #4a90d9; color: #fff; border-radius: 4px;
+           padding: 2px 8px; font-size: 0.85em; margin-left: 8px; }
+  .subscores { color: #888; font-size: 0.8em; margin-left: 6px; }
+  .paper .summary { margin: 8px 0; color: #444; line-height: 1.6; }
+  .tags { margin-top: 6px; }
+  .tag { display: inline-block; background: #e8f0fe; color: #1967d2; border-radius: 3px;
+         padding: 2px 8px; font-size: 0.8em; margin-right: 4px; margin-bottom: 4px; }
+  .authors { font-size: 0.85em; color: #888; margin-top: 4px; }
+  .author-names { line-height: 1.6; }
+  .author-affiliations { margin-top: 3px; }
+  .affil-badge { display: inline-block; background: #e8eaf6; color: #283593; border-radius: 4px;
+                 padding: 3px 10px; font-size: 0.88em; margin-right: 6px; margin-bottom: 4px;
+                 font-weight: 500; letter-spacing: 0.2px; }
+  .h-index { display: inline-block; background: #e8f5e9; color: #2e7d32; border-radius: 3px;
+             padding: 1px 6px; font-size: 0.75em; margin-left: 2px; font-weight: 600; }
+  .h-badge { display: inline-block; background: #fff3e0; color: #e65100; border-radius: 4px;
+             padding: 2px 6px; font-size: 0.8em; margin-left: 8px; }
+  .venue { display: inline-block; background: #f3e5f5; color: #7b1fa2; border-radius: 3px;
+           padding: 2px 8px; font-size: 0.8em; margin-left: 8px; }
+  .citation-badge { display: inline-block; background: #e3f2fd; color: #1565c0; border-radius: 3px;
+                    padding: 2px 8px; font-size: 0.8em; margin-left: 4px; }
+  .tldr { font-size: 0.88em; color: #555; margin: 4px 0; font-style: italic; }
+
+  /* Responsive */
+  @media (max-width: 768px) {
+    .layout { flex-direction: column; }
+    .sidebar { width: 100%; height: auto; position: static; border-right: none;
+               border-bottom: 1px solid #e0e0e0; padding: 12px 16px; }
+    .sidebar-nav { display: flex; flex-wrap: wrap; gap: 4px; }
+    .sidebar-nav li { margin-bottom: 0; }
+    .main { padding: 16px; }
+  }
+</style>
+</head>
+<body>
+<div class="layout">
+
+<!-- Sidebar -->
+<aside class="sidebar">
+  <a href="index.html" class="sidebar-back">&larr; 返回索引</a>
+  <h3>分类导航</h3>
+  <ul class="sidebar-nav">
+    
+    <li><a href="#summary">今日热点</a></li>
+    
+    
+    <li><a href="#cat-1" data-cat="1">AI Agent <span class="nav-count">26</span></a></li>
+    
+    <li><a href="#cat-2" data-cat="2">视频算法 <span class="nav-count">21</span></a></li>
+    
+    <li><a href="#cat-3" data-cat="3">图像生成 <span class="nav-count">19</span></a></li>
+    
+    <li><a href="#cat-4" data-cat="4">多模态大模型 <span class="nav-count">17</span></a></li>
+    
+    <li><a href="#cat-5" data-cat="5">底层视觉 <span class="nav-count">17</span></a></li>
+    
+  </ul>
+  <div class="sidebar-meta">
+    2026-11-19<br>共 100 篇
+  </div>
+</aside>
+
+<!-- Main Content -->
+<main class="main">
+  <h1>Paper Tracker</h1>
+  <p class="meta">2026-11-19 &middot; 100 papers</p>
+
+  
+  <section class="summary-section" id="summary">
+    <h2>今日热点总结</h2>
+    <p><strong>底层视觉</strong>：扩散先验被广泛迁移至视频修复、低光增强等任务；退化感知与空间自适应路由成热点；多模态融合、领域化超分（天文、超声、高光谱）与可恢复性课程学习兴起。</p>
+<p><strong>视频算法</strong>：交互式视频世界模型成核心主线（全景状态、规则控制、物理响应）；免训练稀疏注意力加速视频扩散；递归自改进与智能体化视频生成/评测同步升温。</p>
+<p><strong>图像生成</strong>：像素空间/无解码器架构兴起，层级扩散Transformer提升效率；扩散RL后训练（奖励探索、偏好对齐）与免训练控制（权重扰动、区域提示）并进；可解释性与基础视觉技能泛化受关注。</p>
+<p><strong>多模态大模型</strong>：视觉-语言融合scaling law、视觉想象路由与注视引导推理成热点；测试时计算高效分配（草图思考、KV缓存剪裁）与多教师蒸馏后训练配方涌现；跨模态幻觉抑制获关注。</p>
+<p><strong>AI Agent</strong>：递归自我改进与智能体工程化（MLE、科研、代码）成主线；强化学习信用分配、课程学习与推理加速（推测解码）持续升温；安全对齐与可验证评测基准密集发布。</p>
+<p><strong>跨领域趋势</strong>：递归自我改进与强化学习后训练贯穿视频评测、图像生成、多模态推理与智能体；免训练/高效推理策略（稀疏注意力、推测解码、测试时计算分配）成为各方向共同瓶颈的解法。</p>
+  </section>
+  
+
+  
+  <div class="category" id="cat-1">
+    <h2>AI Agent (26)</h2>
+    
+    <div class="paper">
+      <div class="paper-title">
+        <a href="https://arxiv.org/abs/2611.23910v1" target="_blank">MLE Agents: Autonomous ML Engineering in Large-scale Recommendation Systems</a>
+        <span class="score">84</span>
+        <span class="subscores">相关 37 · 新颖 21 · 质量 26</span>
+        
+        
+      </div>
+      
+      <div class="summary">构建面向工业级搜索排序模型的人在环MLE智能体，可自主提出、实现、训练并评估模型改动，一次campaign完成1097个实验、接受率29.6%，最佳模型在大规模A/B测试中搜索量提升0.23%。</div>
+      <div class="tags">
+        
+        <span class="tag">代码智能体</span>
+        
+        <span class="tag">机器学习工程</span>
+        
+        <span class="tag">推荐系统</span>
+        
+      </div>
+      <div class="authors">
+        
+          <div class="author-names">
+            Matthew Li, Albert Liang, Dilip Raj
+            
+          </div>
+          
+          
+            
+              
+            
+          
+            
+          
+            
+          
+          
+          <div class="author-affiliations">
+            <span class="affil-badge">Matthew Li††thanks:Equal contribution.Affiliation:Meta PlatformsEmail:mli01@meta.com</span>
+          </div>
+          
+        
+      </div>
+    </div>
+    
+    <div class="paper">
+      <div class="paper-title">
+        <a href="https://arxiv.org/abs/2611.22085v1" target="_blank">ATLAS-Finance: Benchmarking AI Agents in Realistic Banking Environments</a>
+        <span class="score">82</span>
+        <span class="subscores">相关 36 · 新颖 20 · 质量 26</span>
+        
+        
+      </div>
+      <div class="tldr">ATLAS-Finance, a benchmark of 100 end-to-end investment-banking tasks across 13 simulated firms, is introduced, finding that despite completing substantial portions of the requested work, current agents rarely produce correct deliverables.</div>
+      <div class="summary">推出ATLAS-Finance基准，包含13家模拟投行中100个端到端投资银行任务（专家需15-30小时），当前最强智能体（Claude Opus等）通过率不足11%，暴露信息检索与金融建模的严重短板。</div>
+      <div class="tags">
+        
+        <span class="tag">智能体基准</span>
+        
+        <span class="tag">金融</span>
+        
+        <span class="tag">工具与环境</span>
+        
+      </div>
+      <div class="authors">
+        
+          <div class="author-names">
+            Elaine Lau <span class="h-index">h=8</span>, Antoine Pangas, Alexandre Finot <span class="h-index">h=0</span>, Collin Schweiker <span class="h-index">h=1</span>, Amir Bouzidi <span class="h-index">h=0</span>, Hui Wen Goh, Andrew Peter Martin, Jonas Mueller
+            <span class="h-badge">max h=8</span>
+          </div>
+          
+          
+            
+              
+            
+          
+            
+          
+            
+          
+            
+          
+            
+          
+            
+          
+            
+          
+            
+          
+          
+          <div class="author-affiliations">
+            <span class="affil-badge">Handshake AI</span>
+          </div>
+          
+        
+      </div>
+    </div>
+    
+    <div class="paper">
+      <div class="paper-title">
+        <a href="https://arxiv.org/abs/2611.23917v1" target="_blank">Vanguard: Knowing When to Trust the Draft in Speculative Vision-Language Agents</a>
+        <span class="score">80</span>
+        <span class="subscores">相关 32 · 新颖 24 · 质量 24</span>
+        
+        
+      </div>
+      
+      <div class="summary">提出Vanguard训练-free裁判，用带截图的通用决策模型为小模型草稿步骤打分以决定是否信任，使2B草稿在网页、移动与具身智能体任务上准确率不低于8B目标模型甚至更优，同时大幅提速。</div>
+      <div class="tags">
+        
+        <span class="tag">推测式推理</span>
+        
+        <span class="tag">智能体</span>
+        
+        <span class="tag">延迟优化</span>
+        
+      </div>
+      <div class="authors">
+        
+          <div class="author-names">
+            Hanqi Mao, Jiajun Fan <span class="h-index">h=57</span>, Ruihan Guo <span class="h-index">h=4</span>, Shuaike Shen, Ziwen Wang <span class="h-index">h=39</span>, Hui Ren <span class="h-index">h=35</span>, Xianrui Zhong <span class="h-index">h=8</span>, Ge Liu <span class="h-index">h=48</span>
+            <span class="h-badge">max h=57</span>
+          </div>
+          
+          
+            
+          
+            
+              
+            
+          
+            
+              
+            
+          
+            
+          
+            
+              
+            
+          
+            
+              
+            
+          
+            
+          
+            
+              
+            
+          
+          
+          <div class="author-affiliations">
+            <span class="affil-badge">University of Illinois Urbana-Champaign</span><span class="affil-badge">University of California, Berkeley</span><span class="affil-badge">Kunming University of Science and Technology</span><span class="affil-badge">Tongji University</span><span class="affil-badge">Chinese Academy of Sciences</span>
+          </div>
+          
+        
+      </div>
+    </div>
+    
+    <div class="paper">
+      <div class="paper-title">
+        <a href="https://arxiv.org/abs/2611.21845v1" target="_blank">EmbedGym: Letting Coding Agents Develop and Debug Embedded Firmware Without Physical Hardware</a>
+        <span class="score">80</span>
+        <span class="subscores">相关 34 · 新颖 22 · 质量 24</span>
+        
+        
+      </div>
+      <div class="tldr">EbedGym is presented, an interactive virtual hardware environment that lets coding agents develop and debug embedded firmware without physical hardware and outperforms prior embedded agent frameworks, and lightweight models with EmbedGym match frontier models without it at 30-70x lower cost.</div>
+      <div class="summary">提出EmbedGym虚拟硬件环境与含598任务的EmbedGym-Bench，让编码智能体在指令级MCU仿真中开发调试嵌入式固件，交互式硬件测试使各模型通过率提升4.9%-14.7%，轻量模型配合EmbedGym可匹敌前沿模型且成本低30-70倍。</div>
+      <div class="tags">
+        
+        <span class="tag">编码智能体</span>
+        
+        <span class="tag">嵌入式固件</span>
+        
+        <span class="tag">仿真环境</span>
+        
+      </div>
+      <div class="authors">
+        
+          <div class="author-names">
+            Minghui Zhao <span class="h-index">h=7</span>, Yiming Li <span class="h-index">h=5</span>, Sophie Zhu <span class="h-index">h=0</span>, Maxwell Khor <span class="h-index">h=0</span>, Lauren Ouyang <span class="h-index">h=0</span>, Hai "Helen" Li, Yiran Chen, Tingjun Chen
+            <span class="h-badge">max h=7</span>
+          </div>
+          
+          
+            
+              
+            
+          
+            
+          
+            
+          
+            
+          
+            
+              
+            
+          
+            
+          
+            
+          
+            
+          
+          
+          <div class="author-affiliations">
+            <span class="affil-badge">Department of Electrical and Computer Engineering, Duke University</span><span class="affil-badge">Tesla STEM High School</span>
+          </div>
+          
+        
+      </div>
+    </div>
+    
+    <div class="paper">
+      <div class="paper-title">
+        <a href="https://arxiv.org/abs/2611.24302v1" target="_blank">OpenKAGE: Open-Ended Lifelong Learning in the Open World via Knowledge-Sharing Agent-Group Evolution</a>
+        <span class="score">78</span>
+        <span class="subscores">相关 35 · 新颖 22 · 质量 21</span>
+        
+        
+      </div>
+      
+      <div class="summary">提出OpenKAGE智能体群体进化框架，以两层知识表示和知识共享机制（共享知识图谱与可执行技能）支持开放世界终身学习，在Minecraft中30天运行达到Voyager等未及的技术里程碑且知识可迁移到新模型骨干的智能体群。</div>
+      <div class="tags">
+        
+        <span class="tag">终身学习</span>
+        
+        <span class="tag">智能体群体</span>
+        
+        <span class="tag">知识共享</span>
+        
+      </div>
+      <div class="authors">
+        
+          <div class="author-names">
+            Wenhao Yuan, Longhui Yuan, Zexi Jia, Ningzhe Shi, Jingwei Li, Shipeng Cen, Pengcheng Luo, Jie Zhou, Jinchao Zhang
+            
+          </div>
+          
+          
+            
+              
+            
+          
+            
+          
+            
+          
+            
+          
+            
+          
+            
+          
+            
+          
+            
+          
+            
+          
+          
+          <div class="author-affiliations">
+            <span class="affil-badge">Jinchao Zhang</span>
+          </div>
+          
+        
+      </div>
+    </div>
+    
+    <div class="paper">
+      <div class="paper-title">
+        <a href="https://arxiv.org/abs/2611.21978v1" target="_blank">WebAgents: Unbundling Agent Creation, Hosting, and Execution for an Agent-Native Web</a>
+        <span class="score">78</span>
+        <span class="subscores">相关 33 · 新颖 22 · 质量 23</span>
+        
+        
+      </div>
+      <div class="tldr">A path toward NANDA-based discovery and interoperable package ecosystems while retaining execution authority in the user's runtime is outlined, by outlining a path toward NANDA-based discovery and interoperable package ecosystems while retaining execution authority in the user's runtime.</div>
+      <div class="summary">提出WebAgents，用签名的agent.pkg将智能体创建、托管与执行解耦，运行时绑定用户自控的模型、工具与权限，在受控测试中拦截全部716个注入违规并接受全部295个良性对照。</div>
+      <div class="tags">
+        
+        <span class="tag">智能体生态</span>
+        
+        <span class="tag">可移植性</span>
+        
+        <span class="tag">安全授权</span>
+        
+      </div>
+      <div class="authors">
+        
+          <div class="author-names">
+            Dario Fenoglio <span class="h-index">h=5</span>, Martin Gjoreski <span class="h-index">h=23</span>, Marc Langheinrich <span class="h-index">h=8</span>, Pradyumna Chari <span class="h-index">h=11</span>, Ramesh Raskar <span class="h-index">h=89</span>
+            <span class="h-badge">max h=89</span>
+          </div>
+          
+          
+            
+              
+            
+          
+            
+              
+            
+          
+            
+          
+            
+              
+            
+          
+            
+          
+          
+          <div class="author-affiliations">
+            <span class="affil-badge">Università della Svizzera italiana (USI), Switzerland; Massachusetts Institute of Technology (MIT), United States</span><span class="affil-badge">Università della Svizzera italiana (USI), Switzerland</span><span class="affil-badge">Massachusetts Institute of Technology (MIT), United States</span>
+          </div>
+          
+        
+      </div>
+    </div>
+    
+    <div class="paper">
+      <div class="paper-title">
+        <a href="https://arxiv.org/abs/2611.24697v1" target="_blank">Depth Before Breadth: Reverse-to-Forward Curriculum with Advantage Decomposition for LLM Agent</a>
+        <span class="score">77</span>
+        <span class="subscores">相关 37 · 新颖 21 · 质量 19</span>
+        
+        
+      </div>
+      
+      <div class="summary">提出基于策略能力区域的逆向-正向课程与配对优势分解方法，缓解稀疏奖励下长程智能体的信用分配难题，在ALFWorld和WebShop上以1.5B/7B模型分别取得90.1%/96.1%与80.2%/82.6%成功率，超越多种智能体强化学习基线。</div>
+      <div class="tags">
+        
+        <span class="tag">强化学习</span>
+        
+        <span class="tag">长程任务</span>
+        
+        <span class="tag">信用分配</span>
+        
+        <span class="tag">课程学习</span>
+        
+      </div>
+      <div class="authors">
+        
+          <div class="author-names">
+            Siyuan Du, Yuxin Liu, Meng Tang, Haoran Li, Yechao Bai, Feiyang Pan <span class="h-index">h=12</span>, Jia He
+            <span class="h-badge">max h=12</span>
+          </div>
+          
+          
+            
+              
+            
+          
+            
+              
+            
+          
+            
+              
+            
+          
+            
+          
+            
+          
+            
+              
+            
+          
+            
+          
+          
+          <div class="author-affiliations">
+            <span class="affil-badge">Nanjing University</span><span class="affil-badge">Peking University</span><span class="affil-badge">University of Wales, Aberystwyth</span><span class="affil-badge">Huawei Technologies (China)</span>
+          </div>
+          
+        
+      </div>
+    </div>
+    
+    <div class="paper">
+      <div class="paper-title">
+        <a href="https://arxiv.org/abs/2611.21950v1" target="_blank">DiscoveryAgent: A Framework for Scientist-centric Agentic AI</a>
+        <span class="score">76</span>
+        <span class="subscores">相关 30 · 新颖 23 · 质量 23</span>
+        
+        
+      </div>
+      <div class="tldr">DiscoveryAgent is presented, a domain-agnostic, scientist-centric system that combines autonomous investigation with scientist-directed hypothesis steering, and a rigorous checkpointing system that enables highly capable audit agents, a scalable form of oversight for agentic research.</div>
+      <div class="summary">提出科学家主导的自主科研智能体框架DiscoveryAgent，通过检查点记录与审计智能体实现可监督的假设引导，在星表分类、蛋白变异效应预测等任务上优于基线，且人机协作审阅发现的有效错误比纯人工多14倍。</div>
+      <div class="tags">
+        
+        <span class="tag">科研智能体</span>
+        
+        <span class="tag">人机协作</span>
+        
+        <span class="tag">审计</span>
+        
+        <span class="tag">假设引导</span>
+        
+      </div>
+      <div class="authors">
+        
+          <div class="author-names">
+            Owen Queen <span class="h-index">h=7</span>, Ioana Ciuca <span class="h-index">h=15</span>, Emma Dann <span class="h-index">h=23</span>, Jean Somalwar <span class="h-index">h=0</span>, Carine You <span class="h-index">h=1</span>, Steven Dillmann <span class="h-index">h=10</span>, Viraj Manwadkar <span class="h-index">h=11</span>, Evan Gorrell, Harrison G Zhang, Jonathan K Pritchard, Risa H Wechsler, James Zou <span class="h-index">h=121</span>
+            <span class="h-badge">max h=121</span>
+          </div>
+          
+          
+            
+              
+            
+          
+            
+          
+            
+              
+            
+          
+            
+          
+            
+          
+            
+              
+            
+          
+            
+              
+            
+          
+            
+          
+            
+          
+            
+          
+            
+          
+            
+              
+            
+          
+          
+          <div class="author-affiliations">
+            <span class="affil-badge">Together</span><span class="affil-badge">Gladstone Institutes</span><span class="affil-badge">Amazon (United States)</span><span class="affil-badge">SLAC National Accelerator Laboratory</span><span class="affil-badge">Rutgers, The State University of New Jersey</span>
+          </div>
+          
+        
+      </div>
+    </div>
+    
+    <div class="paper">
+      <div class="paper-title">
+        <a href="https://arxiv.org/abs/2611.22591v1" target="_blank">PACT: Plan-Action Consistency Training by Preserving Correct Plans and Repairing Actions in GUI Agents</a>
+        <span class="score">75</span>
+        <span class="subscores">相关 33 · 新颖 21 · 质量 21</span>
+        
+        
+      </div>
+      <div class="tldr">PACT (Plan-Action Consistency Training), a training framework that combines reference-aligned plan protection and plan-aligned action repair without altering the original scalar action reward, is established as an effective credit-assignment framework for bridging execution gaps and improving task completion across mobile and desktop GUI environments.</div>
+      <div class="summary">提出PACT训练框架，通过保护正确规划的token并偏好修复错误执行来弥合GUI智能体的计划-执行不一致，在AndroidWorld上将任务成功率从60.34%提升至68.97%，在OSWorld上从40.92%提升至44.17%。</div>
+      <div class="tags">
+        
+        <span class="tag">GUI智能体</span>
+        
+        <span class="tag">信用分配</span>
+        
+        <span class="tag">强化学习</span>
+        
+        <span class="tag">计划-执行一致性</span>
+        
+      </div>
+      <div class="authors">
+        
+          <div class="author-names">
+            Zhuohan Cai <span class="h-index">h=4</span>, Zhangxuan Gu <span class="h-index">h=14</span>, Runze Li <span class="h-index">h=6</span>, Beitong Zhou <span class="h-index">h=4</span>, Ming Wen <span class="h-index">h=6</span>, Hongbo Yu, Shuheng Shen, Changhua Meng
+            <span class="h-badge">max h=14</span>
+          </div>
+          
+          
+            
+              
+            
+          
+            
+          
+            
+          
+            
+          
+            
+          
+            
+          
+            
+          
+            
+          
+          
+          <div class="author-affiliations">
+            <span class="affil-badge">Zhuohan CaiAffiliation:Tsinghua University   Ant Group</span>
+          </div>
+          
+        
+      </div>
+    </div>
+    
+    <div class="paper">
+      <div class="paper-title">
+        <a href="https://arxiv.org/abs/2611.24294v1" target="_blank">KnowledgeClaw: Towards Agentic Knowledge Engineering via Omnimodal Hypergraphs</a>
+        <span class="score">75</span>
+        <span class="subscores">相关 28 · 新颖 23 · 质量 24</span>
+        
+        
+      </div>
+      
+      <div class="summary">形式化全模态知识工程任务并发布OmniKE-Bench基准，提出KnowledgeClaw智能体系统以全模态类型超图、闭环生命周期管理与多粒度检索路由，在6项任务上对30个基线全部排名第一，综合OKE得分55.9、领先14.6分。</div>
+      <div class="tags">
+        
+        <span class="tag">知识工程</span>
+        
+        <span class="tag">超图</span>
+        
+        <span class="tag">多模态</span>
+        
+        <span class="tag">智能体系统</span>
+        
+      </div>
+      <div class="authors">
+        
+          <div class="author-names">
+            Haoran Luo, Jiapu Wang, Linhao Luo <span class="h-index">h=22</span>, Luu Anh Tuan
+            <span class="h-badge">max h=22</span>
+          </div>
+          
+          
+            
+              
+            
+          
+            
+              
+            
+          
+            
+              
+            
+          
+            
+          
+          
+          <div class="author-affiliations">
+            <span class="affil-badge">Nanyang Technological University, Singapore</span><span class="affil-badge">Nanjing University of Science and Technology</span><span class="affil-badge">Monash University</span>
+          </div>
+          
+        
+      </div>
+    </div>
+    
+    <div class="paper">
+      <div class="paper-title">
+        <a href="https://arxiv.org/abs/2611.23810v1" target="_blank">Continual Tool-Space Extension Learning for Multimodal Agents</a>
+        <span class="score">74</span>
+        <span class="subscores">相关 32 · 新颖 23 · 质量 19</span>
+        
+        
+      </div>
+      
+      <div class="summary">提出COTEX持续工具空间扩展学习方法，用正交约束的低秩适配器接入新专家视觉工具，在10个视觉语言基准上获得提升，而原有工具性能最多仅下降0.3分。</div>
+      <div class="tags">
+        
+        <span class="tag">持续学习</span>
+        
+        <span class="tag">工具扩展</span>
+        
+        <span class="tag">多模态智能体</span>
+        
+        <span class="tag">低秩适配</span>
+        
+      </div>
+      <div class="authors">
+        
+          <div class="author-names">
+            Jinbae Seo, Jungin Park, Hyunsung Jang, Namkoo Ha, Jiyoung Lee, Kwanghoon Sohn
+            
+          </div>
+          
+          
+            
+              
+            
+          
+            
+          
+            
+          
+            
+          
+            
+          
+            
+          
+          
+          <div class="author-affiliations">
+            <span class="affil-badge">Jinbae Seo  Jungin Park  Hyunsung Jang  Namkoo Ha  Jiyoung Lee  Kwanghoon SohnAffiliation:Yonsei University   Daegu Gyeongbuk Institute of Science and Technology (DGIST)</span>
+          </div>
+          
+        
+      </div>
+    </div>
+    
+    <div class="paper">
+      <div class="paper-title">
+        <a href="https://arxiv.org/abs/2611.22539v1" target="_blank">JET: Just-Enough Exploration Tuning for Efficient Tool-Calling Agents in Repository-Level Question Answering</a>
+        <span class="score">74</span>
+        <span class="subscores">相关 36 · 新颖 19 · 质量 19</span>
+        
+        
+      </div>
+      <div class="tldr">Just-Enough Exploration Tuning (JET), a fine-tuning method that trains the agent to answer once the gathered information is sufficient, is proposed, which truncates each training trajectory at the step where the gathered information becomes sufficient, and fine-tunes the agent with a higher loss weight on the rationale.</div>
+      <div class="summary">发现仓库级问答智能体存在过度探索现象，提出JET微调方法在信息足够时截断轨迹并插入高权重解释，减少11%-33%的工具调用与推理成本同时基本保持任务得分。</div>
+      <div class="tags">
+        
+        <span class="tag">工具调用</span>
+        
+        <span class="tag">代码问答</span>
+        
+        <span class="tag">微调</span>
+        
+        <span class="tag">效率优化</span>
+        
+      </div>
+      <div class="authors">
+        
+          <div class="author-names">
+            Yoonho Choi <span class="h-index">h=0</span>, Taehyeon Han <span class="h-index">h=0</span>, Seonghyeon Lee <span class="h-index">h=4</span>
+            <span class="h-badge">max h=4</span>
+          </div>
+          
+          
+            
+              
+            
+          
+            
+          
+            
+          
+          
+          <div class="author-affiliations">
+            <span class="affil-badge">Kyungpook National University</span>
+          </div>
+          
+        
+      </div>
+    </div>
+    
+    <div class="paper">
+      <div class="paper-title">
+        <a href="https://arxiv.org/abs/2611.24651v1" target="_blank">Piccolo: Co-Evolving Decision Models and Data through Recursive Self-Improvement</a>
+        <span class="score">73</span>
+        <span class="subscores">相关 30 · 新颖 20 · 质量 23</span>
+        
+        
+      </div>
+      
+      <div class="summary">提出Piccolo系列0.8B至27B多模态决策模型，通过智能体数据工程与递归自我改进实现模型与数据协同演化，Piccolo-27B以75.59分登顶Decision Index Vision Full榜单，并揭示骨干-配方协同等三条反直觉结论。</div>
+      <div class="tags">
+        
+        <span class="tag">递归自我改进</span>
+        
+        <span class="tag">决策模型</span>
+        
+        <span class="tag">数据工程</span>
+        
+        <span class="tag">多模态</span>
+        
+      </div>
+      <div class="authors">
+        
+          <div class="author-names">
+            Zhenqing Ling <span class="h-index">h=5</span>, Qirui Jiao, Daoyuan Chen, Cheng Chen, Xinji Mai, Haowen Gao, Zhuo Zhang, Xuchen Pan, Mengsu Ding, Jiaji Deng, Yuexiang Xie, Xiaoming Qin, Weirui Kuang, Zhaoyang Liu, Yaliang Li, Bolin Ding, Jingren Zhou
+            <span class="h-badge">max h=5</span>
+          </div>
+          
+          
+            
+              
+            
+          
+            
+          
+            
+          
+            
+          
+            
+          
+            
+          
+            
+          
+            
+          
+            
+          
+            
+          
+            
+          
+            
+          
+            
+          
+            
+          
+            
+          
+            
+          
+            
+          
+          
+          <div class="author-affiliations">
+            <span class="affil-badge">Sun Yat-sen University</span>
+          </div>
+          
+        
+      </div>
+    </div>
+    
+    <div class="paper">
+      <div class="paper-title">
+        <a href="https://arxiv.org/abs/2611.23855v1" target="_blank">RoboBuilder: Agentic Robot Co-Design with Real-world Video Feedback in the Loop</a>
+        <span class="score">73</span>
+        <span class="subscores">相关 27 · 新颖 22 · 质量 24</span>
+        
+        
+      </div>
+      
+      <div class="summary">提出RoboBuilder基准，让编码智能体协同设计机器人硬件与程序并进行真实物理测试闭环，发现模拟通过的设计仅66%在现实中成立，而观看失败视频后重新设计可消除72%的低难度失败。</div>
+      <div class="tags">
+        
+        <span class="tag">机器人设计</span>
+        
+        <span class="tag">仿真到现实</span>
+        
+        <span class="tag">编码智能体</span>
+        
+        <span class="tag">闭环反馈</span>
+        
+      </div>
+      <div class="authors">
+        
+          <div class="author-names">
+            Ghadi Nehme, Dahyun Nam, Akshay Govind Srinivasan, Faez Ahmed
+            
+          </div>
+          
+          
+            
+              
+            
+          
+            
+          
+            
+          
+            
+          
+          
+          <div class="author-affiliations">
+            <span class="affil-badge">Faez AhmedAffiliation:Department of Mechanical Engineering, Massachusetts Institute of TechnologyAffiliation:Cambridge, MA, USAAffiliation:{ghadi, diananam, akshaygs, faez}@mit.edu</span>
+          </div>
+          
+        
+      </div>
+    </div>
+    
+    <div class="paper">
+      <div class="paper-title">
+        <a href="https://arxiv.org/abs/2611.23483v1" target="_blank">SpecLook: Speculating Where to Look for Fast and Reliable Agentic MLLMs</a>
+        <span class="score">72</span>
+        <span class="subscores">相关 32 · 新颖 22 · 质量 18</span>
+        
+        
+      </div>
+      
+      <div class="summary">提出免训练的SpecLook推测-验证框架，由小模型推测下一观察而非最终答案来加速带放大工具的多模态智能体，在V*、HR-Bench、POPE上以7.7倍至9.9倍加速实现87.2%与86.2%的平均准确率且全面超越基线。</div>
+      <div class="tags">
+        
+        <span class="tag">多模态智能体</span>
+        
+        <span class="tag">推测加速</span>
+        
+        <span class="tag">视觉工具</span>
+        
+        <span class="tag">可靠性</span>
+        
+      </div>
+      <div class="authors">
+        
+          <div class="author-names">
+            Xi Ding, Jiawei Zhang
+            
+          </div>
+          
+          
+            
+              
+            
+          
+            
+          
+          
+          <div class="author-affiliations">
+            <span class="affil-badge">University of Wisconsin–Madison</span>
+          </div>
+          
+        
+      </div>
+    </div>
+    
+    <div class="paper">
+      <div class="paper-title">
+        <a href="https://arxiv.org/abs/2611.24711v1" target="_blank">Openhagen Worlds: Calibrated Environments for Measuring and Training Scientific Discovery Agents</a>
+        <span class="score">72</span>
+        <span class="subscores">相关 30 · 新颖 21 · 质量 21</span>
+        
+        
+      </div>
+      
+      <div class="summary">提出Openhagen Worlds，包含27个程序化生成、经校准门控的科学发现环境共178个难度等级，用于测量和训练智能体的实验推理能力，前沿模型在84个保留实例上解出57个而脚本先知可达79个。</div>
+      <div class="tags">
+        
+        <span class="tag">科学发现</span>
+        
+        <span class="tag">基准</span>
+        
+        <span class="tag">实验推理</span>
+        
+        <span class="tag">环境校准</span>
+        
+      </div>
+      <div class="authors">
+        
+          <div class="author-names">
+            Alexander Boesgaard Lorup
+            
+          </div>
+          
+          
+            
+          
+          
+        
+      </div>
+    </div>
+    
+    <div class="paper">
+      <div class="paper-title">
+        <a href="https://arxiv.org/abs/2611.23476v1" target="_blank">GUARD: Stabilizing Recursive Self-Improvement with Regret Guidance</a>
+        <span class="score">72</span>
+        <span class="subscores">相关 28 · 新颖 22 · 质量 22</span>
+        
+        
+      </div>
+      
+      <div class="summary">提出GUARD框架，通过任务自检清单分解遗憾信号并以Soft-HURT门控推进编辑，实现无外部评审器下智能体提示工具集的稳定递归自我改进，达到19/19无回退晋升并将部署token成本降低54.5%。</div>
+      <div class="tags">
+        
+        <span class="tag">递归自我改进</span>
+        
+        <span class="tag">智能体框架</span>
+        
+        <span class="tag">无遗忘</span>
+        
+        <span class="tag">遗憾引导</span>
+        
+      </div>
+      <div class="authors">
+        
+          <div class="author-names">
+            Minghe Zhang, Xuetao Kang, Yifei Ming, Yanfei Chen, Han Yu, Yufan Zhuang, Chen-Yu Lee
+            
+          </div>
+          
+          
+            
+              
+            
+          
+            
+          
+            
+          
+            
+          
+            
+          
+            
+          
+            
+          
+          
+          <div class="author-affiliations">
+            <span class="affil-badge">Minghe ZhangAffiliation:Google CloudAffiliation:Equal contribution</span>
+          </div>
+          
+        
+      </div>
+    </div>
+    
+    <div class="paper">
+      <div class="paper-title">
+        <a href="https://arxiv.org/abs/2611.24154v1" target="_blank">Game2Player: Scaling Gameplay Experience for Visual Agents through Environment-Player Co-Development</a>
+        <span class="score">71</span>
+        <span class="subscores">相关 29 · 新颖 22 · 质量 20</span>
+        
+        
+      </div>
+      
+      <div class="summary">提出Game2Player环境-玩家协同开发框架，构建568个经验证网页游戏与3436个任务、收集15.7K条轨迹，用进度加权SFT训练的9B智能体在PlayerBench上进度从14.3%提升至31.2%并迁移到GameWorld基准。</div>
+      <div class="tags">
+        
+        <span class="tag">游戏智能体</span>
+        
+        <span class="tag">环境生成</span>
+        
+        <span class="tag">数据合成</span>
+        
+        <span class="tag">视觉智能体</span>
+        
+      </div>
+      <div class="authors">
+        
+          <div class="author-names">
+            Xirui Jiang, Yuxi Chen, Rui Yang, Feng Luo, Pengcheng Wang, Bingxuan Li, Zihao Zhao, Yushan Li, Han Wang, Manling Li, Yang Zhang, Shiyu Chang, Tong Zhang, Huan Zhang
+            
+          </div>
+          
+          
+            
+              
+            
+          
+            
+          
+            
+          
+            
+          
+            
+          
+            
+          
+            
+          
+            
+          
+            
+          
+            
+          
+            
+          
+            
+          
+            
+          
+            
+          
+          
+          <div class="author-affiliations">
+            <span class="affil-badge">Huan Zhang1Affiliation:1UIUC,2UC Santa Barbara,3Georgia Tech,4Northwestern University,5IBMWebsiteCodeModels</span>
+          </div>
+          
+        
+      </div>
+    </div>
+    
+    <div class="paper">
+      <div class="paper-title">
+        <a href="https://arxiv.org/abs/2611.23080v1" target="_blank">Colombo: A Frontier-to-Frontier Autoresearch System for Oracle-Based Optimization</a>
+        <span class="score">71</span>
+        <span class="subscores">相关 26 · 新颖 24 · 质量 21</span>
+        
+        
+      </div>
+      <div class="tldr">Colombo, a self-organizing AI researcher that drives this renewal, first instantiated in oracle-based optimization, takes a concrete step toward Autopoietic Science: a scientific process whose validated advances regenerate the conditions of its own progress, continually reshaping how inquiry is organized and what it can discover.</div>
+      <div class="summary">提出自组织自动科研系统Colombo，通过复杂度地图、对抗协同攀升与Lean形式化验证推进基于预言机的优化研究前沿，已在复杂度地图中为50多个设置建立最优或近最优速率。</div>
+      <div class="tags">
+        
+        <span class="tag">自动科研</span>
+        
+        <span class="tag">形式化验证</span>
+        
+        <span class="tag">优化理论</span>
+        
+        <span class="tag">自我组织</span>
+        
+      </div>
+      <div class="authors">
+        
+          <div class="author-names">
+            Haihan Zhang <span class="h-index">h=6</span>, Wendao Wu <span class="h-index">h=3</span>, Chenheng Zhang <span class="h-index">h=5</span>, Chunyuan Zheng <span class="h-index">h=17</span>, Yanyi Li <span class="h-index">h=3</span>, Cong Fang, Haoxuan Li, Zhouchen Lin
+            <span class="h-badge">max h=17</span>
+          </div>
+          
+          
+            
+          
+            
+          
+            
+          
+            
+          
+            
+          
+            
+          
+            
+          
+            
+          
+          
+        
+      </div>
+    </div>
+    
+    <div class="paper">
+      <div class="paper-title">
+        <a href="https://arxiv.org/abs/2611.22971v1" target="_blank">SEAM: Computer-Use Agents Know the Harm Between Screens, and Commit It Anyway</a>
+        <span class="score">71</span>
+        <span class="subscores">相关 27 · 新颖 21 · 质量 23</span>
+        
+        
+      </div>
+      <div class="tldr">SEAM (Safety Execution Across Multiple screens), a benchmark of cross-screen compositional harm: 600 multi-step, cross-application OSWorld tasks in which the instruction and every single observation are benign and only their combination is harmful.</div>
+      <div class="summary">提出SEAM基准构造跨屏幕组合式危害任务，指令与单屏观察均无害但组合有害，通用智能体在最高92%的运行中执行了危害且即使识别到冲突仍继续执行，揭示安全识别与安全执行之间的脱节。</div>
+      <div class="tags">
+        
+        <span class="tag">安全基准</span>
+        
+        <span class="tag">计算机使用智能体</span>
+        
+        <span class="tag">组合危害</span>
+        
+        <span class="tag">安全对齐</span>
+        
+      </div>
+      <div class="authors">
+        
+          <div class="author-names">
+            Yuxuan Zhou <span class="h-index">h=4</span>, Chen Xiong <span class="h-index">h=4</span>, Haitong Liu <span class="h-index">h=2</span>, Kuofeng Gao <span class="h-index">h=15</span>, Yang Bai <span class="h-index">h=4</span>, Zhiyuan He, Tao Dai, Shu-Tao Xia
+            <span class="h-badge">max h=15</span>
+          </div>
+          
+          
+            
+              
+            
+          
+            
+          
+            
+          
+            
+          
+            
+          
+            
+          
+            
+          
+            
+          
+          
+          <div class="author-affiliations">
+            <span class="affil-badge">Tao DaiAffiliation:Tsinghua University  The Chinese University of Hong Kong  ByteDance  Shenzhen University</span>
+          </div>
+          
+        
+      </div>
+    </div>
+    
+    <div class="paper">
+      <div class="paper-title">
+        <a href="https://arxiv.org/abs/2611.22777v1" target="_blank">CrossEnv: Synthesizing Verifiable Cross-Environment Tasks for Long-Horizon Agent Training</a>
+        <span class="score">71</span>
+        <span class="subscores">相关 28 · 新颖 21 · 质量 22</span>
+        
+        
+      </div>
+      <div class="tldr">CrossEnv is introduced, a framework that uses an entity-tool graph to identify connections between environments and aligns task-specific data to synthesize executable, verifiable cross-environment tasks.</div>
+      <div class="summary">提出CrossEnv框架利用实体-工具图合成跨环境可执行可验证任务并配套渐进课程，在四个外部基准上以更少训练样本达到竞争性能，并展示向新环境组合与更长工作流的迁移能力。</div>
+      <div class="tags">
+        
+        <span class="tag">环境合成</span>
+        
+        <span class="tag">长程智能体</span>
+        
+        <span class="tag">课程学习</span>
+        
+        <span class="tag">跨环境任务</span>
+        
+      </div>
+      <div class="authors">
+        
+          <div class="author-names">
+            Zhengfeng Yu <span class="h-index">h=0</span>, Tian Lan <span class="h-index">h=6</span>, Zhijing Wu <span class="h-index">h=3</span>, Enbo Zhao <span class="h-index">h=8</span>, Xuannan Liu <span class="h-index">h=13</span>, Feihu Jiang, Qianghuai Jia, Longyue Wang, Zhao Xu, Weihua Luo, Xian-Ling Mao
+            <span class="h-badge">max h=13</span>
+          </div>
+          
+          
+            
+              
+            
+          
+            
+          
+            
+          
+            
+          
+            
+          
+            
+          
+            
+          
+            
+          
+            
+          
+            
+          
+            
+          
+          
+          <div class="author-affiliations">
+            <span class="affil-badge">Zhengfeng YuAffiliation:Beijing Institute of TechnologyAffiliation:Alibaba Group</span>
+          </div>
+          
+        
+      </div>
+    </div>
+    
+    <div class="paper">
+      <div class="paper-title">
+        <a href="https://arxiv.org/abs/2611.24887v1" target="_blank">Ground, Iterate, Trace: Decomposing AI Research Ideation</a>
+        <span class="score">71</span>
+        <span class="subscores">相关 31 · 新颖 21 · 质量 19</span>
+        
+        
+      </div>
+      
+      <div class="summary">提出CAR科研创意智能体框架，结合文献知识图谱、迭代开发与四种显式创意算子，在40个研究主题上方法新颖性显著优于单次提示与The AI Scientist，并在两个执行基准上取得最高胜率。</div>
+      <div class="tags">
+        
+        <span class="tag">科研创意</span>
+        
+        <span class="tag">知识图谱</span>
+        
+        <span class="tag">智能体</span>
+        
+        <span class="tag">可追溯性</span>
+        
+      </div>
+      <div class="authors">
+        
+          <div class="author-names">
+            Samson Yu, Qiran Zou, Jing Yu Lim, Rushi Shah, Anirudh Goyal, Dianbo Liu
+            
+          </div>
+          
+          
+            
+              
+            
+          
+            
+          
+            
+          
+            
+          
+            
+          
+            
+          
+          
+          <div class="author-affiliations">
+            <span class="affil-badge">Anirudh GoyalAffiliation:National University of Singapore  Meta Superintelligence Labs</span>
+          </div>
+          
+        
+      </div>
+    </div>
+    
+    <div class="paper">
+      <div class="paper-title">
+        <a href="https://arxiv.org/abs/2611.23633v1" target="_blank">Option-GRPO: Hierarchical RL Against AI Slop in Code Generation for Unseen SDKs</a>
+        <span class="score">71</span>
+        <span class="subscores">相关 30 · 新颖 22 · 质量 19</span>
+        
+        
+      </div>
+      
+      <div class="summary">提出Option-GRPO分层强化学习框架，仅凭SDK源码自适应未见SDK的代码生成并优化简洁优雅性，在12个未见SDK上达到61.4% pass@1、超越平坦GRPO 8.7分，代码缩短27%、API调用减少34.7%。</div>
+      <div class="tags">
+        
+        <span class="tag">代码生成</span>
+        
+        <span class="tag">分层强化学习</span>
+        
+        <span class="tag">SDK适配</span>
+        
+        <span class="tag">代码质量</span>
+        
+      </div>
+      <div class="authors">
+        
+          <div class="author-names">
+            Prashank Kadam
+            
+          </div>
+          
+          
+            
+              
+            
+          
+          
+          <div class="author-affiliations">
+            <span class="affil-badge">Cerby Inc., USA</span>
+          </div>
+          
+        
+      </div>
+    </div>
+    
+    <div class="paper">
+      <div class="paper-title">
+        <a href="https://arxiv.org/abs/2611.23824v1" target="_blank">Evidence-Based Credit Assignment for Search-Augmented Language Models</a>
+        <span class="score">70</span>
+        <span class="subscores">相关 28 · 新颖 20 · 质量 22</span>
+        
+        
+      </div>
+      
+      <div class="summary">提出基于证据的信用分配方法ECA，用检索文档对参考答案似然度的提升作为辅助信号为搜索动作分配信用，ECA-Horizon在七个Search QA基准上较结果监督GRPO提升1.03至4.80个百分点并有效迁移到多跳推理。</div>
+      <div class="tags">
+        
+        <span class="tag">检索增强</span>
+        
+        <span class="tag">强化学习</span>
+        
+        <span class="tag">信用分配</span>
+        
+        <span class="tag">搜索智能体</span>
+        
+      </div>
+      <div class="authors">
+        
+          <div class="author-names">
+            Wen Wang, Jindong Wang, Jiahua Bao, Tu Yongsiqi, Yihao Liu, Junwei He, Wenkui Fan
+            
+          </div>
+          
+          
+            
+          
+            
+          
+            
+          
+            
+          
+            
+          
+            
+          
+            
+          
+          
+        
+      </div>
+    </div>
+    
+    <div class="paper">
+      <div class="paper-title">
+        <a href="https://arxiv.org/abs/2611.22841v1" target="_blank">Verifying Agents in Rubric-Graded Environments</a>
+        <span class="score">70</span>
+        <span class="subscores">相关 27 · 新颖 20 · 质量 23</span>
+        
+        <span class="citation-badge">2 citations</span>
+      </div>
+      <div class="tldr">This work conducts the first systematic study of verifiers for rubric-graded agent environments, and develops a methodology that derives from any rubric corpus the capabilities a verifier should possess, yielding a nine-capability taxonomy.</div>
+      <div class="summary">首次系统研究评分标准驱动环境中的验证器，构建含2464个人工判定标准的BVB基准并提出开源验证器Gandalf，以五分之一成本匹配最强基线F1（0.864对0.852）并在另一环境达到最高F1。</div>
+      <div class="tags">
+        
+        <span class="tag">智能体验证</span>
+        
+        <span class="tag">评分标准</span>
+        
+        <span class="tag">评测基准</span>
+        
+        <span class="tag">开源验证器</span>
+        
+      </div>
+      <div class="authors">
+        
+          <div class="author-names">
+            Markus Dücker <span class="h-index">h=1</span>, Vaibhav Kumar <span class="h-index">h=7</span>, Yi Liu <span class="h-index">h=5</span>, Ronak Chaudhary <span class="h-index">h=1</span>, Andreas Plesner <span class="h-index">h=7</span>, Francisco Guzmán, Anish Athalye
+            <span class="h-badge">max h=7</span>
+          </div>
+          
+          
+            
+          
+            
+          
+            
+          
+            
+          
+            
+              
+            
+          
+            
+          
+            
+          
+          
+          <div class="author-affiliations">
+            <span class="affil-badge">ETH Zurich</span>
+          </div>
+          
+        
+      </div>
+    </div>
+    
+    <div class="paper">
+      <div class="paper-title">
+        <a href="https://arxiv.org/abs/2611.21797v1" target="_blank">Can Coding Agents Write and Transpile Unit Tests</a>
+        <span class="score">70</span>
+        <span class="subscores">相关 31 · 新颖 16 · 质量 23</span>
+        
+        
+      </div>
+      <div class="tldr">Verifying across a broad suite of metrics, it is found that coding agents far exceed human written suites on traditional measures of coverage, and that agentic test translation---while seemingly strong in aggregate---remains inconsistent and unreliable.</div>
+      <div class="summary">系统评测编码智能体生成与跨语言转译单元测试的能力，发现智能体测试覆盖率优于人工但随项目规模下降且多依赖数量优势，C++到Rust测试转译约55%的项目出现回退，应视为需人工复核的草稿。</div>
+      <div class="tags">
+        
+        <span class="tag">单元测试</span>
+        
+        <span class="tag">代码智能体</span>
+        
+        <span class="tag">测试转译</span>
+        
+        <span class="tag">可靠性评测</span>
+        
+      </div>
+      <div class="authors">
+        
+          <div class="author-names">
+            Gil Pasternak <span class="h-index">h=4</span>, AJ Langley <span class="h-index">h=0</span>, Tom Yotam <span class="h-index">h=1</span>, Ellie Kitanidis <span class="h-index">h=0</span>
+            <span class="h-badge">max h=4</span>
+          </div>
+          
+          
+            
+              
+            
+          
+            
+          
+            
+          
+            
+          
+          
+          <div class="author-affiliations">
+            <span class="affil-badge">Gil Pasternak††thanks:Equal contribution.Affiliation:Code MetalEmail:gil.pasternak@codemetal.ai</span>
+          </div>
+          
+        
+      </div>
+    </div>
+    
+  </div>
+  
+  <div class="category" id="cat-2">
+    <h2>视频算法 (21)</h2>
+    
+    <div class="paper">
+      <div class="paper-title">
+        <a href="https://arxiv.org/abs/2611.23417v1" target="_blank">Autoregressive View Model</a>
+        <span class="score">83</span>
+        <span class="subscores">相关 33 · 新颖 25 · 质量 25</span>
+        
+        
+      </div>
+      
+      <div class="summary">提出自回归视图模型AVM，不显式构建3D表示而以视图流形式通过统一上下文接口按请求相机路径生成场景片段，经N-in-1流匹配微调和自回滚因果调优，在约800万场景上训练，在相机控制、重建、长时一致性等基准上表现强劲。</div>
+      <div class="tags">
+        
+        <span class="tag">视频生成</span>
+        
+        <span class="tag">世界模型</span>
+        
+        <span class="tag">自回归</span>
+        
+        <span class="tag">新视角合成</span>
+        
+      </div>
+      <div class="authors">
+        
+          <div class="author-names">
+            Jensen, Zhou, Samuel Rota Bulo, Denis Rozumny, Duncan Zauss, Peter Hedman, Nikhil Keetha, Philip Torr, Christian Rupprecht, Andrea Vedaldi, Peter Kontschieder
+            
+          </div>
+          
+          
+            
+              
+            
+          
+            
+          
+            
+          
+            
+          
+            
+          
+            
+          
+            
+          
+            
+          
+            
+          
+            
+          
+            
+          
+          
+          <div class="author-affiliations">
+            <span class="affil-badge">Jensen (Jinghao) ZhouAffiliation:MetaAffiliation:University of Oxford</span>
+          </div>
+          
+        
+      </div>
+    </div>
+    
+    <div class="paper">
+      <div class="paper-title">
+        <a href="https://arxiv.org/abs/2611.24408v1" target="_blank">StrideWorld: Benchmarking Scene Rigidity and Action Consistency in Interactive Video World Model</a>
+        <span class="score">81</span>
+        <span class="subscores">相关 36 · 新颖 22 · 质量 23</span>
+        
+        
+      </div>
+      
+      <div class="summary">提出StrideWorld基准，用运动前固定的参考（起始视角真值几何与模型自身步幅）评估交互式视频世界模型的场景刚性和动作一致性，揭示多数开源模型随相机移动产生场景形变且组合路线常停滞，深度缩放指令与显式3D缓存是关键设计。</div>
+      <div class="tags">
+        
+        <span class="tag">视频世界模型</span>
+        
+        <span class="tag">基准</span>
+        
+        <span class="tag">场景刚性</span>
+        
+        <span class="tag">动作一致性</span>
+        
+      </div>
+      <div class="authors">
+        
+          <div class="author-names">
+            Chuang Wang, Rui Nie, Jie Song, Junyuan Gao, Jiahe Song, Haitao Zhou, Boyu Zhu, Xing Li, Jiang Wu, Conghui He, Qian Yu, Weijia Li
+            
+          </div>
+          
+          
+            
+              
+            
+          
+            
+          
+            
+          
+            
+          
+            
+          
+            
+          
+            
+          
+            
+          
+            
+          
+            
+          
+            
+          
+            
+          
+          
+          <div class="author-affiliations">
+            <span class="affil-badge">Chuang WangAffiliation:Shanghai Jiao Tong UniversityEmail:qianyu@buaa.edu.cn</span>
+          </div>
+          
+        
+      </div>
+    </div>
+    
+    <div class="paper">
+      <div class="paper-title">
+        <a href="https://arxiv.org/abs/2611.24479v1" target="_blank">Every Query Routes Itself: Accelerating Video Diffusion Transformers with Per-Query Routed Sparse Attention</a>
+        <span class="score">77</span>
+        <span class="subscores">相关 31 · 新颖 23 · 质量 23</span>
+        
+        
+      </div>
+      
+      <div class="summary">提出免训练的逐查询路由稀疏注意力PQRS，仅对键做聚类、让每个查询自选键簇并用质心补偿未选簇，在Wan与HunyuanVideo系列四个视频扩散模型上取得1.66–2.10倍端到端加速，同时最接近稠密注意力输出（Wan2.1-T2V达28.9 dB PSNR）</div>
+      <div class="tags">
+        
+        <span class="tag">稀疏注意力</span>
+        
+        <span class="tag">视频扩散</span>
+        
+        <span class="tag">推理加速</span>
+        
+        <span class="tag">免训练</span>
+        
+      </div>
+      <div class="authors">
+        
+          <div class="author-names">
+            Zhen Huang, Shuwei Li, Ruizhe Yao, Xinrui Chen, Danyi Liu, Haoyuan Liang, Zhiyu Ye, Qiuyan Sun, Bingwei Chen, Yiyuan Li, Xu Zhou, Haohuan Fu
+            
+          </div>
+          
+          
+            
+              
+            
+          
+            
+          
+            
+          
+            
+          
+            
+          
+            
+          
+            
+          
+            
+          
+            
+          
+            
+          
+            
+          
+            
+          
+          
+          <div class="author-affiliations">
+            <span class="affil-badge">Bingwei ChenAffiliation:Tsinghua University  Harbin Institute of Technology, Shenzhen  Sangfor Technologies</span>
+          </div>
+          
+        
+      </div>
+    </div>
+    
+    <div class="paper">
+      <div class="paper-title">
+        <a href="https://arxiv.org/abs/2611.22790v1" target="_blank">NexSight: Verifiable Tasks for Fine-Grained Agentic Long-Video Understanding</a>
+        <span class="score">77</span>
+        <span class="subscores">相关 34 · 新颖 22 · 质量 21</span>
+        
+        
+      </div>
+      <div class="tldr">NexSight is presented, which builds verifiable tasks to both evaluate and train agentic long-video understanding, and Sight-35B, which nearly doubles its base model's interactive accuracy and outperforms the 397B model of its family on external long-video benchmarks.</div>
+      <div class="summary">提出NexSight框架构建可验证的长视频细粒度智能体理解任务（SightLine 310题）与多尺度探索工具SightLoop，并用验证轨迹作步级监督训练Sight-35B，交互准确率从21.29%翻倍至42.26%超过同系397B模型且外部基准提升8分以上。</div>
+      <div class="tags">
+        
+        <span class="tag">长视频理解</span>
+        
+        <span class="tag">智能体</span>
+        
+        <span class="tag">可验证任务</span>
+        
+        <span class="tag">视频评测</span>
+        
+      </div>
+      <div class="authors">
+        
+          <div class="author-names">
+            Tianci Xie <span class="h-index">h=0</span>, Li Chen <span class="h-index">h=0</span>, Pinxue Guo <span class="h-index">h=13</span>, Rui Zheng <span class="h-index">h=5</span>
+            <span class="h-badge">max h=13</span>
+          </div>
+          
+          
+            
+              
+            
+          
+            
+          
+            
+          
+            
+          
+          
+          <div class="author-affiliations">
+            <span class="affil-badge">Tianci XieAffiliation:Zhejiang University</span>
+          </div>
+          
+        
+      </div>
+    </div>
+    
+    <div class="paper">
+      <div class="paper-title">
+        <a href="https://arxiv.org/abs/2611.22925v2" target="_blank">Code World Model 2.0: Towards Infinite Controllable Video Generation</a>
+        <span class="score">76</span>
+        <span class="subscores">相关 33 · 新颖 22 · 质量 21</span>
+        
+        
+      </div>
+      <div class="tldr">This work presents Invoker-Render, pairing a bidirectional creation model with a causal four-step streaming model under a shared conditioning interface over structural proxies, an appearance reference, and language to bridge bidirectional creation and real-time streaming without compounding step compression and rollout drift.</div>
+      <div class="summary">提出Invoker-Render，用统一条件接口把双向创作模型与四步因果流式模型结合，并通过渐进强制ProForcing蒸馏缓解自回归漂移，在约200小时多粒度视频-代理数据上支持从粗到细的几何控制，实现稳定30分钟赛车交互式生成</div>
+      <div class="tags">
+        
+        <span class="tag">世界模型</span>
+        
+        <span class="tag">交互式视频生成</span>
+        
+        <span class="tag">流式生成</span>
+        
+        <span class="tag">代理条件控制</span>
+        
+      </div>
+      <div class="authors">
+        
+          <div class="author-names">
+            Ruoyu Wang <span class="h-index">h=4</span>, Hao Zhong <span class="h-index">h=6</span>, Yanming Yang <span class="h-index">h=5</span>, Jiahao Tian <span class="h-index">h=5</span>, Lin Liu <span class="h-index">h=6</span>, Biao Gong, Guoshan Lu, Yiding Tian, Chunhua Shen, Zhenzhong Lan, Chi Zhang <span class="h-index">h=78</span>
+            <span class="h-badge">max h=78</span>
+          </div>
+          
+          
+            
+              
+            
+          
+            
+              
+            
+          
+            
+          
+            
+          
+            
+              
+            
+          
+            
+          
+            
+          
+            
+          
+            
+              
+            
+          
+            
+          
+            
+              
+            
+          
+          
+          <div class="author-affiliations">
+            <span class="affil-badge">Inclusion AI, Ant Group; Westlake University</span><span class="affil-badge">Inclusion AI, Ant Group; Zhejiang University</span><span class="affil-badge">Inclusion AI, Ant Group</span><span class="affil-badge">Zhejiang University</span><span class="affil-badge">Guangxi University</span>
+          </div>
+          
+        
+      </div>
+    </div>
+    
+    <div class="paper">
+      <div class="paper-title">
+        <a href="https://arxiv.org/abs/2611.24193v1" target="_blank">WM^MLLM: Turning MLLMs into World Models</a>
+        <span class="score">75</span>
+        <span class="subscores">相关 31 · 新颖 24 · 质量 20</span>
+        
+        
+      </div>
+      
+      <div class="summary">提出首个基于多模态大模型的交互式世界模型WM-MLLM，把世界状态外置为带修订历史的全景图并由MLLM执行读写与校验，在MBench-A上四项环境恢复指标全胜基线（Epipolar 91.5）、46次重访全部精确复现、局部编辑成功率从34.8%提升到83.0%</div>
+      <div class="tags">
+        
+        <span class="tag">世界模型</span>
+        
+        <span class="tag">多模态大模型</span>
+        
+        <span class="tag">全景状态</span>
+        
+        <span class="tag">可编辑生成</span>
+        
+      </div>
+      <div class="authors">
+        
+          <div class="author-names">
+            Baiang Li, Enze Xie, Jincheng Yu, Jin Wang, Haozhe Liu, Yitong Li, Juanxi Tian, Felix Heide
+            
+          </div>
+          
+          
+            
+              
+            
+          
+            
+          
+            
+          
+            
+          
+            
+          
+            
+          
+            
+          
+            
+          
+          
+          <div class="author-affiliations">
+            <span class="affil-badge">Jincheng Yu</span>
+          </div>
+          
+        
+      </div>
+    </div>
+    
+    <div class="paper">
+      <div class="paper-title">
+        <a href="https://arxiv.org/abs/2611.23950v1" target="_blank">VOL-Agent: Programming Your Film via Video Orchestration Language Agentic System</a>
+        <span class="score">75</span>
+        <span class="subscores">相关 34 · 新颖 22 · 质量 19</span>
+        
+        
+      </div>
+      
+      <div class="summary">提出基于「视频编排语言VOL」的可编程视频智能体VOL-Agent，通过静态编译验证与运行时动态加载分离结构可靠性与执行灵活性，并用结构记忆保持角色与场景一致，在三个基准上以有限成本生成分钟级连贯影片</div>
+      <div class="tags">
+        
+        <span class="tag">视频智能体</span>
+        
+        <span class="tag">长视频生成</span>
+        
+        <span class="tag">编排语言</span>
+        
+        <span class="tag">结构记忆</span>
+        
+      </div>
+      <div class="authors">
+        
+          <div class="author-names">
+            Hongji Yang, Yucheng Zhou, Lingting Zhu, Shengju Qian, Xinye Li, Huan Zheng, Dongyue Lu, Wei Chow, Xin Wang, Cheng-zhong Xu, Jianbing Shen
+            
+          </div>
+          
+          
+            
+              
+            
+          
+            
+          
+            
+          
+            
+          
+            
+          
+            
+          
+            
+          
+            
+          
+            
+          
+            
+          
+            
+          
+          
+          <div class="author-affiliations">
+            <span class="affil-badge">Hongji YangAffiliation:SKL-IOTSC, Department of AIX, University of Macau</span>
+          </div>
+          
+        
+      </div>
+    </div>
+    
+    <div class="paper">
+      <div class="paper-title">
+        <a href="https://arxiv.org/abs/2611.23226v1" target="_blank">FastFrames: Video Generation at Interactive Latency</a>
+        <span class="score">75</span>
+        <span class="subscores">相关 34 · 新颖 21 · 质量 20</span>
+        
+        
+      </div>
+      <div class="tldr">This paper introduces FastFrames, a family of fast autoregressive video diffusion models that achieves interactive latency without compromising quality and enables real-time interaction in applications such as camera-conditioned and physics-conditioned video generation.</div>
+      <div class="summary">提出FastFrames自回归视频扩散模型族，通过重新设计VAE解码与KV缓存等常被忽视的组件实现交互级延迟：1.3B模型单卡B200达36 ms每帧（28 RPS）且质量匹配近8倍慢的SOTA，14B模型达45 ms每帧并支持实时相机/物理条件生成</div>
+      <div class="tags">
+        
+        <span class="tag">实时视频生成</span>
+        
+        <span class="tag">自回归扩散</span>
+        
+        <span class="tag">推理优化</span>
+        
+        <span class="tag">交互式</span>
+        
+      </div>
+      <div class="authors">
+        
+          <div class="author-names">
+            Gene Chou <span class="h-index">h=7</span>, Guandao Yang <span class="h-index">h=15</span>, Fujun Luan <span class="h-index">h=31</span>, Lars Mescheder <span class="h-index">h=14</span>, Wei Dong <span class="h-index">h=13</span>, Stephan Richter <span class="h-index">h=22</span>, Vladlen Koltun <span class="h-index">h=117</span>
+            <span class="h-badge">max h=117</span>
+          </div>
+          
+          
+            
+              
+            
+          
+            
+              
+            
+          
+            
+              
+            
+          
+            
+              
+            
+          
+            
+              
+            
+          
+            
+              
+            
+          
+            
+              
+            
+          
+          
+          <div class="author-affiliations">
+            <span class="affil-badge">Cornell University</span><span class="affil-badge">The University of Texas at Austin</span><span class="affil-badge">Adobe Systems (United States)</span><span class="affil-badge">Amazon (United States)</span><span class="affil-badge">Jiangsu University</span><span class="affil-badge">European Commission</span><span class="affil-badge">Intel (United States)</span>
+          </div>
+          
+        
+      </div>
+    </div>
+    
+    <div class="paper">
+      <div class="paper-title">
+        <a href="https://arxiv.org/abs/2611.22755v1" target="_blank">Teaching What to Look For: Privileged Perception Questions for Agentic On-Policy Distillation in Video Captioning</a>
+        <span class="score">75</span>
+        <span class="subscores">相关 34 · 新颖 21 · 质量 20</span>
+        
+        
+      </div>
+      <div class="tldr">Perception-Question On-Policy Distillation (PQ-OPD) uses training-only Perception Questions (PQs) to guide active video perception and achieves the strongest primary-metric results among the compared open-source models on DREAM-1K, CaReBench, ShortVidBench, MotionBench, and VidCapBench-AE.</div>
+      <div class="summary">提出PQ-OPD，用仅训练时的感知问题引导视频描述智能体主动寻找视觉证据，并通过学生轨迹上的在线策略蒸馏内化探索策略，在DREAM-1K、CaReBench等五个详述描述与描述转问答基准上取得对比开源模型最强结果</div>
+      <div class="tags">
+        
+        <span class="tag">视频描述</span>
+        
+        <span class="tag">在线策略蒸馏</span>
+        
+        <span class="tag">智能体</span>
+        
+        <span class="tag">主动感知</span>
+        
+      </div>
+      <div class="authors">
+        
+          <div class="author-names">
+            Yifan Xu <span class="h-index">h=4</span>, Ruopeng Gao <span class="h-index">h=5</span>, Zhixiao Wang <span class="h-index">h=1</span>, Jiafu Tang <span class="h-index">h=4</span>, Yichun Yang <span class="h-index">h=4</span>, Zihao Wang, Yuanxing Zhang, Limin Wang
+            <span class="h-badge">max h=5</span>
+          </div>
+          
+          
+            
+              
+            
+          
+            
+          
+            
+          
+            
+          
+            
+          
+            
+          
+            
+          
+            
+          
+          
+          <div class="author-affiliations">
+            <span class="affil-badge">Ruopeng GaoAffiliation:Nanjing University</span>
+          </div>
+          
+        
+      </div>
+    </div>
+    
+    <div class="paper">
+      <div class="paper-title">
+        <a href="https://arxiv.org/abs/2611.21782v1" target="_blank">Every Camera Grows Up: Camera-Height Regression in Interactive Video World Models</a>
+        <span class="score">75</span>
+        <span class="subscores">相关 31 · 新颖 23 · 质量 21</span>
+        
+        
+      </div>
+      <div class="tldr">This work traces this pull to human-centric video priors in which floor-level views are nearly absent to human-centric video priors in SANA-WM, where textual height cues and dense floor-disparity maps do not prevent it, whereas classifier-free text guidance during the first half of denoising strengthens it.</div>
+      <div class="summary">提出EyeHeight基准并揭示「相机高度回归」现象：六个开源交互式世界模型在转身行走后都把相机拉向人眼高度（0.15 m初始化时仅0-20%片段保持高度），追溯到人类视角视频先验，且视角漂移会改变视觉导航策略预测的路径</div>
+      <div class="tags">
+        
+        <span class="tag">世界模型</span>
+        
+        <span class="tag">相机几何</span>
+        
+        <span class="tag">基准评测</span>
+        
+        <span class="tag">视觉导航</span>
+        
+      </div>
+      <div class="authors">
+        
+          <div class="author-names">
+            Sheng Lu <span class="h-index">h=0</span>, Guangpin Tao <span class="h-index">h=5</span>, Tong Lu <span class="h-index">h=0</span>, Ying Tai <span class="h-index">h=49</span>
+            <span class="h-badge">max h=49</span>
+          </div>
+          
+          
+            
+              
+            
+          
+            
+          
+            
+          
+            
+          
+          
+          <div class="author-affiliations">
+            <span class="affil-badge">Tong LuYing TaiState Key Laboratory for Novel Software Technology, Nanjing University{shenglu,tgpin}@smail.nju.edu.cn    {lutong,yingtai}@nju.edu.cn</span>
+          </div>
+          
+        
+      </div>
+    </div>
+    
+    <div class="paper">
+      <div class="paper-title">
+        <a href="https://arxiv.org/abs/2611.24633v1" target="_blank">H3Remover: Reinforcing Video Object Removal without Paired Data</a>
+        <span class="score">74</span>
+        <span class="subscores">相关 36 · 新颖 20 · 质量 18</span>
+        
+        
+      </div>
+      
+      <div class="summary">提出H3Remover，用无配对数据的强化学习强化MiniMax-H3的视频目标移除能力，设计目标移除、背景几何与外观保护三类奖励并辅以HPSv3感知反馈，相对原始H3获得显著重建提升且更好保持周边场景</div>
+      <div class="tags">
+        
+        <span class="tag">视频修复</span>
+        
+        <span class="tag">视频编辑</span>
+        
+        <span class="tag">强化学习</span>
+        
+        <span class="tag">无配对训练</span>
+        
+      </div>
+      <div class="authors">
+        
+          <div class="author-names">
+            Kangjie Chen, Xiangyu Li, Jinhao Deng, Dongbin Zhang, Chaoda Zheng, Shijia Chen, Yuqi Zhang, Choo Sin Wai, Boyi Sun, Puyi Wang, Yu Zhang, Xianming Liu, Boyang Wang
+            
+          </div>
+          
+          
+            
+              
+            
+          
+            
+          
+            
+          
+            
+          
+            
+          
+            
+          
+            
+          
+            
+          
+            
+          
+            
+          
+            
+          
+            
+          
+            
+          
+          
+          <div class="author-affiliations">
+            <span class="affil-badge">XPENG</span>
+          </div>
+          
+        
+      </div>
+    </div>
+    
+    <div class="paper">
+      <div class="paper-title">
+        <a href="https://arxiv.org/abs/2611.24256v1" target="_blank">Spark-H3: Adaptive Block Sparse Attention for Video Diffusion Models</a>
+        <span class="score">74</span>
+        <span class="subscores">相关 31 · 新颖 21 · 质量 22</span>
+        
+        
+      </div>
+      
+      <div class="summary">提出免训练块稀疏注意力Spark-Attn（递归偏好重分块Spark-Reblock与注意力加权重校准Spark-Reweight），在MiniMax-H3上10%精确块密度下DiT提速2.49倍且PSNR达24.81 dB，20%密度下26.76 dB与2.26倍加速</div>
+      <div class="tags">
+        
+        <span class="tag">块稀疏注意力</span>
+        
+        <span class="tag">视频扩散</span>
+        
+        <span class="tag">推理加速</span>
+        
+        <span class="tag">免训练</span>
+        
+      </div>
+      <div class="authors">
+        
+          <div class="author-names">
+            Zecheng Tang <span class="h-index">h=12</span>, Jiaye Fu <span class="h-index">h=5</span>, Youtian Lin <span class="h-index">h=9</span>, Xinyao Rao, Liuxuan Sun, Jian Zhang <span class="h-index">h=112</span>, Yao Yao <span class="h-index">h=64</span>, Wei Li <span class="h-index">h=117</span>
+            <span class="h-badge">max h=117</span>
+          </div>
+          
+          
+            
+              
+            
+          
+            
+          
+            
+              
+            
+          
+            
+          
+            
+          
+            
+              
+            
+          
+            
+              
+            
+          
+            
+              
+            
+          
+          
+          <div class="author-affiliations">
+            <span class="affil-badge">Peking University</span><span class="affil-badge">Nanjing University</span><span class="affil-badge">Northeast Electric Power University</span><span class="affil-badge">Fujian Medical University</span><span class="affil-badge">Harbin Medical University</span>
+          </div>
+          
+        
+      </div>
+    </div>
+    
+    <div class="paper">
+      <div class="paper-title">
+        <a href="https://arxiv.org/abs/2611.22733v1" target="_blank">Evolve in Panorama, Render in View: Panoramic World State Evolution for Video World Models</a>
+        <span class="score">74</span>
+        <span class="subscores">相关 32 · 新颖 23 · 质量 19</span>
+        
+        
+      </div>
+      <div class="tldr">PanoEvo is presented, which uses a Panoramic Evolver to evolve the world state in the latent space of a panoramic video diffusion model, where every viewing direction is present at every time step, so the scene evolves whether or not it is observed.</div>
+      <div class="summary">提出PanoEvo，在全景视频扩散模型潜空间中演化世界状态并用透视渲染器出图，配合自建事件中心数据集PanoEvo-Data，在WRBench取得23个公开模型中最佳总分、STEVO-Bench最高总分</div>
+      <div class="tags">
+        
+        <span class="tag">世界模型</span>
+        
+        <span class="tag">全景视频</span>
+        
+        <span class="tag">潜空间演化</span>
+        
+        <span class="tag">视频扩散</span>
+        
+      </div>
+      <div class="authors">
+        
+          <div class="author-names">
+            Longtao Jiang <span class="h-index">h=1</span>, Mingfei Han <span class="h-index">h=14</span>, Jianmin Bao <span class="h-index">h=9</span>, Tingjun Dai <span class="h-index">h=4</span>, Jinjie Wei <span class="h-index">h=9</span>, Zhiran Zhang, Xin Tao, Zhihui Li, Salman Khan, Xiaojun Chang
+            <span class="h-badge">max h=14</span>
+          </div>
+          
+          
+            
+              
+            
+          
+            
+          
+            
+          
+            
+          
+            
+          
+            
+          
+            
+          
+            
+          
+            
+          
+            
+          
+          
+          <div class="author-affiliations">
+            <span class="affil-badge">Jianmin BaoAffiliation:Mohamed bin Zayed University of Artificial Intelligence  Kuaishou Technology</span>
+          </div>
+          
+        
+      </div>
+    </div>
+    
+    <div class="paper">
+      <div class="paper-title">
+        <a href="https://arxiv.org/abs/2611.23153v1" target="_blank">VIVID: Beyond Static Multi-Image Reasoning with Localized Visual Differences and Textual Entity Dynamics in Video MLLMs</a>
+        <span class="score">72</span>
+        <span class="subscores">相关 32 · 新颖 21 · 质量 19</span>
+        
+        
+      </div>
+      <div class="tldr">VIVID (Visual Inter-frame Variations and Individual Dynamics), which moves beyond static snapshots like human vision: keyframes capture core states while inter-frame Patch Diffs preserve neighboring changes within $K_f$ keyframes.</div>
+      <div class="summary">提出VIVID，用帧间Patch差异、Delta驱动关键帧规划与双路变化记忆在冻结27B骨干上仅加0.22%可训练参数就捕捉局部运动与事件顺序，在MotionBench、Video-MME、TempCompass共8083题上以50样本即超越十一个基线、3600样本时全面领先</div>
+      <div class="tags">
+        
+        <span class="tag">视频多模态大模型</span>
+        
+        <span class="tag">视频问答</span>
+        
+        <span class="tag">运动理解</span>
+        
+        <span class="tag">高效微调</span>
+        
+      </div>
+      <div class="authors">
+        
+          <div class="author-names">
+            Chengqian Ma <span class="h-index">h=2</span>, Yuanze Zeng <span class="h-index">h=2</span>, Hongyu Wang <span class="h-index">h=0</span>, Mingfeng Lin <span class="h-index">h=0</span>, YiCheng Xiao <span class="h-index">h=11</span>, Yu Chen, Pengyu Li, WenHao Wang, Yuexiao Ma, Xiawu Zheng, Fei Chao
+            <span class="h-badge">max h=11</span>
+          </div>
+          
+          
+            
+              
+            
+          
+            
+          
+            
+          
+            
+          
+            
+          
+            
+          
+            
+          
+            
+          
+            
+          
+            
+          
+            
+          
+          
+          <div class="author-affiliations">
+            <span class="affil-badge">YiCheng XiaoAffiliation:Peking University Shanghai Jiao Tong University Harbin Institute of Technology Southeast University</span>
+          </div>
+          
+        
+      </div>
+    </div>
+    
+    <div class="paper">
+      <div class="paper-title">
+        <a href="https://arxiv.org/abs/2611.22673v1" target="_blank">FVScore: Specification-Driven Neuro-Symbolic Video Evaluation</a>
+        <span class="score">72</span>
+        <span class="subscores">相关 32 · 新颖 22 · 质量 18</span>
+        
+        
+      </div>
+      <div class="tldr">Faithfulness Video Score (FVSCORE), a neuro-symbolic framework for specification-driven video generation evaluation, is introduced, demonstrating that FVSCORE outperforms holistic and agent-based evaluators in human correlation while providing highly accurate and interpretable feedback.</div>
+      <div class="summary">提出神经符号的视频生成评测框架FVScore，把提示与视频编译为显式与隐式命题、用专用感知工具接地并以软时序算子验证，再经显著性校准输出带时间戳与证据的报告，在人类相关性与诊断准确性上超越整体式与智能体式评测器</div>
+      <div class="tags">
+        
+        <span class="tag">视频质量评估</span>
+        
+        <span class="tag">神经符号</span>
+        
+        <span class="tag">时序逻辑</span>
+        
+        <span class="tag">评测基准</span>
+        
+      </div>
+      <div class="authors">
+        
+          <div class="author-names">
+            Do Xuan Long <span class="h-index">h=14</span>, Long T. Le <span class="h-index">h=15</span>, Yiwen Song <span class="h-index">h=9</span>, Min-Yen Kan <span class="h-index">h=11</span>, Tomas Pfister <span class="h-index">h=60</span>, Yale Song
+            <span class="h-badge">max h=60</span>
+          </div>
+          
+          
+            
+              
+            
+          
+            
+          
+            
+          
+            
+          
+            
+          
+            
+          
+          
+          <div class="author-affiliations">
+            <span class="affil-badge">Long T. LeAffiliation:Google Cloud AI Research</span>
+          </div>
+          
+        
+      </div>
+    </div>
+    
+    <div class="paper">
+      <div class="paper-title">
+        <a href="https://arxiv.org/abs/2611.23890v1" target="_blank">EVA-RSI: Recursive Self-Improvement of Video Evaluators for Judging Temporal Quality</a>
+        <span class="score">72</span>
+        <span class="subscores">相关 31 · 新颖 23 · 质量 18</span>
+        
+        
+      </div>
+      
+      <div class="summary">提出多智能体递归自改进框架EVA-RSI，用受控视频扰动构造无标注代理考试、以纳什议价规则平衡多维度改进，从Qwen3-VL-8B起步显著提升时序质量评测（平滑度增益最大）并泛化到未见缺陷，在21个模型的动态子集上取得最高分且可作RL奖励提升生成运动</div>
+      <div class="tags">
+        
+        <span class="tag">视频质量评估</span>
+        
+        <span class="tag">递归自改进</span>
+        
+        <span class="tag">多智能体</span>
+        
+        <span class="tag">奖励模型</span>
+        
+      </div>
+      <div class="authors">
+        
+          <div class="author-names">
+            Yu Yuan, Ruizhou Ding, Shaoheng Fang, Stanley H. Chan, Zhuo Chen
+            
+          </div>
+          
+          
+            
+              
+            
+          
+            
+          
+            
+          
+            
+          
+            
+          
+          
+          <div class="author-affiliations">
+            <span class="affil-badge">Yu Yuan††thanks:Work done during an internship at Roblox.Affiliation:RobloxAffiliation:Purdue University</span>
+          </div>
+          
+        
+      </div>
+    </div>
+    
+    <div class="paper">
+      <div class="paper-title">
+        <a href="https://arxiv.org/abs/2611.22418v1" target="_blank">CutAgent: Creative-Gene-Driven Planning and Experience-Guided Self-Refinement for High-CTR E-commerce Advertising Video Creation</a>
+        <span class="score">71</span>
+        <span class="subscores">相关 32 · 新颖 20 · 质量 19</span>
+        
+        
+      </div>
+      <div class="tldr">A dual-agent framework that formulates advertising video creation as a Plan--Execute--Self-Evolve process that outperforms representative baselines in e-commerce advertising video creation and achieves the highest online CTR of 2.21%.</div>
+      <div class="summary">提出双智能体框架CutAgent（GeneAgent生成「创意基因」、VideoAgent执行拍摄脚本与多模态生产），用约70K样本CutAgent-70K做高CTR微调与CTR引导GRPO，并以经验记忆自反思迭代，在CutAgent-Eval上取得最高在线CTR 2.21%</div>
+      <div class="tags">
+        
+        <span class="tag">视频智能体</span>
+        
+        <span class="tag">广告视频生成</span>
+        
+        <span class="tag">GRPO</span>
+        
+        <span class="tag">经验记忆</span>
+        
+      </div>
+      <div class="authors">
+        
+          <div class="author-names">
+            Xuyue Huang <span class="h-index">h=0</span>, Guanbo Huang <span class="h-index">h=5</span>, Jiasong Feng <span class="h-index">h=6</span>, Run Ling <span class="h-index">h=6</span>, Ao Ma <span class="h-index">h=6</span>, Xi Zhao, Yaoyu Li, Jie Gao, Ke Cao, Wei Feng, Zhanjie Zhang, Hao Wang, Jinghe Hu
+            <span class="h-badge">max h=6</span>
+          </div>
+          
+          
+            
+              
+            
+          
+            
+          
+            
+          
+            
+          
+            
+          
+            
+          
+            
+          
+            
+          
+            
+          
+            
+          
+            
+          
+            
+          
+            
+          
+          
+          <div class="author-affiliations">
+            <span class="affil-badge">Xuyue HuangAffiliation:JD.comAffiliation:Tsinghua UniversityEmail:huang-xy24@mails.tsinghua.edu.cn</span>
+          </div>
+          
+        
+      </div>
+    </div>
+    
+    <div class="paper">
+      <div class="paper-title">
+        <a href="https://arxiv.org/abs/2611.24419v1" target="_blank">PhysResponse: Probing the Physics of Video Generation with Controlled Interventions</a>
+        <span class="score">70</span>
+        <span class="subscores">相关 30 · 新颖 20 · 质量 20</span>
+        
+        
+      </div>
+      
+      <div class="summary">提出PhysResponse基准与数据集，从参数反演（重力、摩擦、初速）与临界转折事件两级测量生成视频对物理参数的响应，评测10个图生视频模型发现参数误差比真实视频高一个数量级以上，并用72000条受控仿真视频微调显著降低误差且可迁移</div>
+      <div class="tags">
+        
+        <span class="tag">世界模型</span>
+        
+        <span class="tag">物理响应</span>
+        
+        <span class="tag">数据集</span>
+        
+        <span class="tag">视频生成评测</span>
+        
+      </div>
+      <div class="authors">
+        
+          <div class="author-names">
+            Yuhan Li, Shuran Zhang, Haixin Tian, Baonuo Rao, Weipeng Li, Yujia Hou, Zhenyu Wang, Zijun Wang, Luoyang Lin, Lijing Luo, Jiehui Huang, Kaiyuan Yang, Jingbin Tan, Panwen Hu, Xiaodan Liang
+            
+          </div>
+          
+          
+            
+              
+            
+          
+            
+          
+            
+          
+            
+          
+            
+          
+            
+          
+            
+          
+            
+          
+            
+          
+            
+          
+            
+          
+            
+          
+            
+          
+            
+          
+            
+          
+          
+          <div class="author-affiliations">
+            <span class="affil-badge">Yuhan LiAffiliation:Sun Yat-sen University</span>
+          </div>
+          
+        
+      </div>
+    </div>
+    
+    <div class="paper">
+      <div class="paper-title">
+        <a href="https://arxiv.org/abs/2611.22857v1" target="_blank">Beyond Co-Generation: Rethinking Jointness in Joint Audio-Video Generation</a>
+        <span class="score">70</span>
+        <span class="subscores">相关 30 · 新颖 22 · 质量 18</span>
+        
+        
+      </div>
+      <div class="tldr">JointREPA is proposed, a simple representation alignment-based post-training method to facilitate cross-modal coordination in joint text-to-audio-video (T2AV) generation and demonstrates that JointREPA consistently improves semantic consistency.</div>
+      <div class="summary">提出「内在联合性」概念与语义欠定基准UNSAIDBench，揭示现有文生音视频模型难以让音画共享同一语义实现，并用表示对齐后训练方法JointREPA在两个模型与三个基准上一致提升语义一致性</div>
+      <div class="tags">
+        
+        <span class="tag">音视频联合生成</span>
+        
+        <span class="tag">跨模态一致性</span>
+        
+        <span class="tag">表示对齐</span>
+        
+        <span class="tag">评测基准</span>
+        
+      </div>
+      <div class="authors">
+        
+          <div class="author-names">
+            Jihoo Jung <span class="h-index">h=2</span>, Ji-Hoon Kim <span class="h-index">h=10</span>, Suyeon Lee <span class="h-index">h=3</span>, Gia Thinh Pham <span class="h-index">h=1</span>, Joon Son Chung <span class="h-index">h=3</span>
+            <span class="h-badge">max h=10</span>
+          </div>
+          
+          
+            
+              
+            
+          
+            
+          
+            
+          
+            
+          
+            
+          
+          
+          <div class="author-affiliations">
+            <span class="affil-badge">Ji-Hoon KimAffiliation:Chung-Ang University</span>
+          </div>
+          
+        
+      </div>
+    </div>
+    
+    <div class="paper">
+      <div class="paper-title">
+        <a href="https://arxiv.org/abs/2611.22495v1" target="_blank">Motion-Aware Reward Modeling for Instruction-Guided Video Editing</a>
+        <span class="score">70</span>
+        <span class="subscores">相关 31 · 新颖 21 · 质量 18</span>
+        
+        
+      </div>
+      <div class="tldr">A motion-aware reward model that combines an RGB frame-difference stream with preference training against motion-suppressed and fabricated-motion negatives and preserves motion during reward-guided fine-tuning on two editing pipelines is proposed.</div>
+      <div class="summary">揭示指令视频编辑奖励模型的「运动塌缩」问题（现有复合奖励在97%情况下偏好运动被抑制的候选），提出结合RGB帧差流与运动抑制/伪造负例偏好训练的运动感知奖励，将误选率降到0%且与人类质量评分Spearman达0.57</div>
+      <div class="tags">
+        
+        <span class="tag">视频编辑</span>
+        
+        <span class="tag">奖励模型</span>
+        
+        <span class="tag">运动一致性</span>
+        
+        <span class="tag">偏好训练</span>
+        
+      </div>
+      <div class="authors">
+        
+          <div class="author-names">
+            Li Li <span class="h-index">h=16</span>, Xiangbo Gao <span class="h-index">h=10</span>, Bo Ni <span class="h-index">h=6</span>, Samyadeep Basu <span class="h-index">h=16</span>, Viet Dac Lai <span class="h-index">h=18</span>, Jing Shi, Seunghyun Yoon, Gang Wu, Yu Wang, Thien Huu Nguyen, Tyler Derr, Franck Dernoncourt, Zhengzhong Tu, Yue Zhao
+            <span class="h-badge">max h=18</span>
+          </div>
+          
+          
+            
+              
+            
+          
+            
+          
+            
+          
+            
+          
+            
+          
+            
+          
+            
+          
+            
+          
+            
+          
+            
+          
+            
+          
+            
+          
+            
+          
+            
+          
+          
+          <div class="author-affiliations">
+            <span class="affil-badge">Li LiAffiliation:University of Southern California</span>
+          </div>
+          
+        
+      </div>
+    </div>
+    
+    <div class="paper">
+      <div class="paper-title">
+        <a href="https://arxiv.org/abs/2611.24869v1" target="_blank">WorldRuler: Interactive World Modeling under Configurable Rules</a>
+        <span class="score">70</span>
+        <span class="subscores">相关 28 · 新颖 23 · 质量 19</span>
+        
+        
+      </div>
+      
+      <div class="summary">提出WorldRuler，用可执行3D规则图维护用户自定义规则、依赖与物体状态，并以动态对象绑定与感知反馈闭环驱动视频生成，配合规则驱动数据集RuleVerse实现在存取档后规则状态一致与对指定对象属性的精确规则实现</div>
+      <div class="tags">
+        
+        <span class="tag">世界模型</span>
+        
+        <span class="tag">规则控制</span>
+        
+        <span class="tag">交互式生成</span>
+        
+        <span class="tag">状态持久化</span>
+        
+      </div>
+      <div class="authors">
+        
+          <div class="author-names">
+            Mingliang Zhai, Chuanhao Li, Jiaming Tan, Zhen Li, Yuwei Wu, Yunde Jia, Zian Meng, Yuanyang Yin, Kaipeng Zhang
+            
+          </div>
+          
+          
+            
+              
+            
+          
+            
+          
+            
+          
+            
+          
+            
+          
+            
+          
+            
+          
+            
+          
+            
+          
+          
+          <div class="author-affiliations">
+            <span class="affil-badge">Mingliang Zhai*Affiliation:Alaya LabAffiliation:Beijing Institute of Technology</span>
+          </div>
+          
+        
+      </div>
+    </div>
+    
+  </div>
+  
+  <div class="category" id="cat-3">
+    <h2>图像生成 (19)</h2>
+    
+    <div class="paper">
+      <div class="paper-title">
+        <a href="https://arxiv.org/abs/2611.22962v1" target="_blank">Hierarchical Diffusion Transformer for End-to-End Image Generation</a>
+        <span class="score">83</span>
+        <span class="subscores">相关 39 · 新颖 23 · 质量 21</span>
+        
+        
+      </div>
+      <div class="tldr">Hierarchical Diffusion Transformers (HiT) is introduced, which progressively group related tokens and represent each group with a single token, suggesting that learning a visual hierarchy within the generator breaks down the barrier to stronger image generation without external visual pretraining.</div>
+      <div class="summary">提出层级扩散Transformer HiT，在像素空间端到端生成中渐进分组相关token以形成视觉层级，ImageNet 256x256达1.48 FID、以约40%训练FLOPs达到JiT质量，文生图以约6倍更少参数与3倍更少FLOPs超越UniLiP平均分</div>
+      <div class="tags">
+        
+        <span class="tag">图像生成</span>
+        
+        <span class="tag">像素空间扩散</span>
+        
+        <span class="tag">层级Transformer</span>
+        
+        <span class="tag">端到端训练</span>
+        
+      </div>
+      <div class="authors">
+        
+          <div class="author-names">
+            Xiaoyu Wu <span class="h-index">h=0</span>, Yifei Wang <span class="h-index">h=7</span>, Weihang Guo <span class="h-index">h=3</span>, Chen Wei <span class="h-index">h=3</span>, Lydia E Kavraki <span class="h-index">h=75</span>, Niloofar Mireshghallah <span class="h-index">h=19</span>, Steven Wu <span class="h-index">h=16</span>
+            <span class="h-badge">max h=75</span>
+          </div>
+          
+          
+            
+              
+            
+          
+            
+              
+            
+          
+            
+              
+            
+          
+            
+          
+            
+          
+            
+              
+            
+          
+            
+              
+            
+          
+          
+          <div class="author-affiliations">
+            <span class="affil-badge">Wuhan Polytechnic University</span><span class="affil-badge">Shanghai University</span><span class="affil-badge">Xuan Wu Hospital of the Capital Medical University</span><span class="affil-badge">Carnegie Mellon University</span><span class="affil-badge">National Taiwan University</span>
+          </div>
+          
+        
+      </div>
+    </div>
+    
+    <div class="paper">
+      <div class="paper-title">
+        <a href="https://arxiv.org/abs/2611.24917v1" target="_blank">Unified Law for Visual Tasks (The Four Laws of Computer Vision)</a>
+        <span class="score">82</span>
+        <span class="subscores">相关 35 · 新颖 24 · 质量 23</span>
+        
+        
+      </div>
+      
+      <div class="summary">提出「视觉任务统一律」与计算机视觉四定律，把视觉任务统一为World Snapshot之间的生成变换，在1148个评测任务、3042个映射上验证统一框架World Snapshot Models，训练效率比同参数原生注意力基线高约100倍并超越多个专用SOTA方法</div>
+      <div class="tags">
+        
+        <span class="tag">统一视觉框架</span>
+        
+        <span class="tag">生成式建模</span>
+        
+        <span class="tag">多任务学习</span>
+        
+        <span class="tag">基础模型</span>
+        
+      </div>
+      <div class="authors">
+        
+          <div class="author-names">
+            Sen Fang, Yalin Feng, Yancheng Zhang, Yanxin Zhang, Zonglin Lyu, Hongbin Zhong, Liwei Che <span class="h-index">h=9</span>, Rui Wu <span class="h-index">h=28</span>, Chen Chen <span class="h-index">h=118</span>, Dimitris N. Metaxas <span class="h-index">h=6</span>
+            <span class="h-badge">max h=118</span>
+          </div>
+          
+          
+            
+              
+            
+          
+            
+              
+            
+          
+            
+              
+            
+          
+            
+              
+            
+          
+            
+          
+            
+              
+            
+          
+            
+              
+            
+          
+            
+              
+            
+          
+            
+              
+            
+          
+            
+          
+          
+          <div class="author-affiliations">
+            <span class="affil-badge">Rutgers, USA</span><span class="affil-badge">NTU, Singapore</span><span class="affil-badge">UCF, USA</span><span class="affil-badge">UW–Madison, USA</span><span class="affil-badge">Georgia Tech, USA Project Page: https://world-snapshot.github.io/WSMs Code Dataset WebUI ´ Document</span><span class="affil-badge">Rutgers, The State University of New Jersey</span><span class="affil-badge">Jiamusi University</span><span class="affil-badge">Jiangsu University</span>
+          </div>
+          
+        
+      </div>
+    </div>
+    
+    <div class="paper">
+      <div class="paper-title">
+        <a href="https://arxiv.org/abs/2611.22287v2" target="_blank">Decoding Without a Decoder: Direct Pixel Prediction from Diffusion Transformers</a>
+        <span class="score">79</span>
+        <span class="subscores">相关 33 · 新颖 24 · 质量 22</span>
+        
+        
+      </div>
+      <div class="tldr">Decoding Without a Decoder (DWD), which lets a finetuned diffusion transformer produce final pixels directly through a linear head, improves pixel diffusion models that do not even use a decoder and removes the decoder and reduces inference cost while maintaining or even improving pixel quality.</div>
+      <div class="summary">提出「Decoding Without a Decoder」(DWD)，在扩散Transformer上以线性像素头直接预测最终像素并仅微调最后几块，去除VAE解码器的同时保持甚至提升像素质量，Wan视频生成的warping error降低23%，像素扩散模型上ImageNet FID从1.55降至1.43达到像素流模型新SOTA。</div>
+      <div class="tags">
+        
+        <span class="tag">diffusion transformer</span>
+        
+        <span class="tag">decoder-free</span>
+        
+        <span class="tag">latent diffusion</span>
+        
+        <span class="tag">video generation</span>
+        
+        <span class="tag">image generation</span>
+        
+      </div>
+      <div class="authors">
+        
+          <div class="author-names">
+            Hansheng Chen <span class="h-index">h=10</span>, Shengqu Cai <span class="h-index">h=15</span>, Jan Ackermann <span class="h-index">h=10</span>, Rayhan Zirvi <span class="h-index">h=2</span>, Gordon Wetzstein <span class="h-index">h=23</span>, Xinchen Yan, Leonidas Guibas
+            <span class="h-badge">max h=23</span>
+          </div>
+          
+          
+            
+              
+            
+          
+            
+          
+            
+          
+            
+          
+            
+          
+            
+          
+            
+          
+          
+          <div class="author-affiliations">
+            <span class="affil-badge">Rayhan ZirviAffiliation:California Institute of Technologyhttps://hanshengchen.com/dwd</span>
+          </div>
+          
+        
+      </div>
+    </div>
+    
+    <div class="paper">
+      <div class="paper-title">
+        <a href="https://arxiv.org/abs/2611.22458v1" target="_blank">Sample-Aligned Decoders for Latent Generative Models</a>
+        <span class="score">78</span>
+        <span class="subscores">相关 35 · 新颖 21 · 质量 22</span>
+        
+        
+      </div>
+      <div class="tldr">Sample-Aligned Decoders (SAD) is proposed, a post-training framework that fine-tunes only the decoder of a frozen generator at no inference cost and improves four state-of-the-art ImageNet generators across three tokenizers, and extends to text-to-image generation.</div>
+      <div class="summary">发现生成潜变量与编码器潜变量分布不同导致解码器误差被直接渲染进图像，提出仅后训练冻结生成器解码器的Sample-Aligned Decoder，用无配对图像做分布对齐并以编码器锚定防漂移，约一GPU小时、零推理开销即让四个ImageNet生成器提升FID，REPA-E从1.15降至0.98。</div>
+      <div class="tags">
+        
+        <span class="tag">latent decoder</span>
+        
+        <span class="tag">post-training</span>
+        
+        <span class="tag">distribution alignment</span>
+        
+        <span class="tag">ImageNet</span>
+        
+        <span class="tag">tokenizer</span>
+        
+      </div>
+      <div class="authors">
+        
+          <div class="author-names">
+            Yu Lei <span class="h-index">h=0</span>, Yi Li <span class="h-index">h=5</span>, Hongcheng Gao <span class="h-index">h=20</span>, Yipeng Wei <span class="h-index">h=1</span>, Liang Li <span class="h-index">h=7</span>, Li Su, Qingming Huang
+            <span class="h-badge">max h=20</span>
+          </div>
+          
+          
+            
+              
+            
+          
+            
+          
+            
+          
+            
+          
+            
+          
+            
+          
+            
+          
+          
+          <div class="author-affiliations">
+            <span class="affil-badge">Yu LeiAffiliation:Institute of Computing Technology, Chinese Academy of Sciences</span>
+          </div>
+          
+        
+      </div>
+    </div>
+    
+    <div class="paper">
+      <div class="paper-title">
+        <a href="https://arxiv.org/abs/2611.24738v1" target="_blank">Jeveration: System One Models Now Generate</a>
+        <span class="score">76</span>
+        <span class="subscores">相关 34 · 新颖 22 · 质量 20</span>
+        
+        
+      </div>
+      
+      <div class="summary">提出Jeveration，让「System One」式VLM以单次前向并行预测整个图像，通过共享随机状态保证全局一致性并先学离散码分布作为监督，一个checkpoint统一文生图、图生图与密集预测，512×512图像仅78ms生成、比现有统一模型快至122倍且质量相当。</div>
+      <div class="tags">
+        
+        <span class="tag">single-pass generation</span>
+        
+        <span class="tag">VLM</span>
+        
+        <span class="tag">parallel decoding</span>
+        
+        <span class="tag">unified model</span>
+        
+        <span class="tag">fast sampling</span>
+        
+      </div>
+      <div class="authors">
+        
+          <div class="author-names">
+            Yuhe Liu, Qi Li, Shihua Zhang, Xinchao Wang
+            
+          </div>
+          
+          
+            
+              
+            
+          
+            
+          
+            
+          
+            
+          
+          
+          <div class="author-affiliations">
+            <span class="affil-badge">Xinchao Wang†Affiliation:National University of SingaporeAffiliation:yuhe_liu@u.nus.edu  liqi@u.nus.edu  suhzhang001@gmail.com  xinchao@nus.edu.sg</span>
+          </div>
+          
+        
+      </div>
+    </div>
+    
+    <div class="paper">
+      <div class="paper-title">
+        <a href="https://arxiv.org/abs/2611.24223v1" target="_blank">Training Denoising Models of Any Architecture Without Stored Images</a>
+        <span class="score">76</span>
+        <span class="subscores">相关 30 · 新颖 23 · 质量 23</span>
+        
+        
+      </div>
+      
+      <div class="summary">证明可用预训练去噪模型的权重作为唯一监督训练任意架构与规模的新去噪模型而无需存储图像，在滚动噪声样本池上回归教师速度场，覆盖12个教师与6个数据集，小4倍学生在CIFAR-10上超过标准训练、同规模与教师FID相差仅0.75至1.92。</div>
+      <div class="tags">
+        
+        <span class="tag">teacher-student</span>
+        
+        <span class="tag">dataset-free training</span>
+        
+        <span class="tag">diffusion</span>
+        
+        <span class="tag">flow matching</span>
+        
+        <span class="tag">distillation</span>
+        
+      </div>
+      <div class="authors">
+        
+          <div class="author-names">
+            Christos Koutlis, Ioannis Kompatsiaris, Symeon Papadopoulos
+            
+          </div>
+          
+          
+            
+              
+            
+          
+            
+          
+            
+          
+          
+          <div class="author-affiliations">
+            <span class="affil-badge">Symeon PapadopoulosAffiliation:Information Technologies Institute, CERTH, Thessaloniki, GreeceEmail:{ckoutlis,ikom,papadop}@iti.gr</span>
+          </div>
+          
+        
+      </div>
+    </div>
+    
+    <div class="paper">
+      <div class="paper-title">
+        <a href="https://arxiv.org/abs/2611.23964v1" target="_blank">Dual-Manifold Variational Autoencoders</a>
+        <span class="score">76</span>
+        <span class="subscores">相关 34 · 新颖 20 · 质量 22</span>
+        
+        
+      </div>
+      
+      <div class="summary">提出双流形VAE（DM-VAE），用低维分支提取光滑拓扑骨架来约束高维重建流形，避免依赖外部基础模型带来的OOD泛化受限，配合拓扑表示对齐与推理时内部引导，在ImageNet-1K上取得0.12的rFID和1.28/1.20的生成FID，与DINOv2正交结合可达1.11。</div>
+      <div class="tags">
+        
+        <span class="tag">VAE</span>
+        
+        <span class="tag">latent manifold</span>
+        
+        <span class="tag">tokenizer</span>
+        
+        <span class="tag">latent diffusion</span>
+        
+        <span class="tag">topology</span>
+        
+      </div>
+      <div class="authors">
+        
+          <div class="author-names">
+            Hongxu Chen, Chun Wang, Yanghao Wang, Hongxiang Li, Zhen Wang, Zhixiang Zhang, Long Chen
+            
+          </div>
+          
+          
+            
+              
+            
+          
+            
+          
+            
+          
+            
+          
+            
+          
+            
+          
+            
+          
+          
+          <div class="author-affiliations">
+            <span class="affil-badge">Long Chen†Affiliation:The Hong Kong University of Science and Technology</span>
+          </div>
+          
+        
+      </div>
+    </div>
+    
+    <div class="paper">
+      <div class="paper-title">
+        <a href="https://arxiv.org/abs/2611.22867v1" target="_blank">LOCUS: Causal Support Windows for Attribute Control in Autoregressive Image Generation</a>
+        <span class="score">76</span>
+        <span class="subscores">相关 36 · 新颖 22 · 质量 18</span>
+        
+        
+      </div>
+      <div class="tldr">This work introduces the causal support profile, which measures, for each attribute, how often patching image-token states within a given window flips the rendered attribute, and proposes LOCUS (Latent Optimization in Causal Support windows), which diagnoses which attribute failed and routes test-time latent optimization to its corresponding support window.</div>
+      <div class="summary">提出因果支撑窗口刻画属性在图像token序列中的可干预位置，发现结构属性（数量、位置）在早期窄窗口、外观属性（颜色、大小、材质）在后期宽窗口最易改变，并据此提出LOCUS将测试时隐变量优化路由到对应窗口，使冻结的Janus-Pro在GenEval++上从24.6%提升到46.8%。</div>
+      <div class="tags">
+        
+        <span class="tag">autoregressive generation</span>
+        
+        <span class="tag">attribute control</span>
+        
+        <span class="tag">test-time optimization</span>
+        
+        <span class="tag">causal patching</span>
+        
+        <span class="tag">compositionality</span>
+        
+      </div>
+      <div class="authors">
+        
+          <div class="author-names">
+            Zijun Huang <span class="h-index">h=0</span>
+            <span class="h-badge">max h=0</span>
+          </div>
+          
+          
+            
+              
+            
+          
+          
+          <div class="author-affiliations">
+            <span class="affil-badge">Independent Researcher</span>
+          </div>
+          
+        
+      </div>
+    </div>
+    
+    <div class="paper">
+      <div class="paper-title">
+        <a href="https://arxiv.org/abs/2611.22427v1" target="_blank">Do Diffusion Models Learn to Generalize Basic Visual Skills?</a>
+        <span class="score">75</span>
+        <span class="subscores">相关 35 · 新颖 20 · 质量 20</span>
+        
+        
+      </div>
+      <div class="tldr">The Visual Generative Lab (VGL) is introduced, a controlled experimental framework for studying how diffusion models learn and generalize basic visual skills, including size, position, rotation, count, color, shape, and their compositions.</div>
+      <div class="summary">提出可控实验框架VGL用规则合成数据系统测量扩散模型对大小、位置、旋转、数量、颜色、形状等基础视觉技能的泛化，发现外推能力很弱（计数域外仅约50%准确率）、组合泛化取决于技能组合数而非数据量、各技能基本独立失败。</div>
+      <div class="tags">
+        
+        <span class="tag">generalization</span>
+        
+        <span class="tag">evaluation benchmark</span>
+        
+        <span class="tag">synthetic data</span>
+        
+        <span class="tag">diffusion models</span>
+        
+        <span class="tag">compositional</span>
+        
+      </div>
+      <div class="authors">
+        
+          <div class="author-names">
+            Amish Sethi <span class="h-index">h=3</span>, Boya Zeng <span class="h-index">h=4</span>, Wenhao Chai <span class="h-index">h=4</span>, Zhuang Liu <span class="h-index">h=6</span>
+            <span class="h-badge">max h=6</span>
+          </div>
+          
+          
+            
+              
+            
+          
+            
+          
+            
+          
+            
+          
+          
+          <div class="author-affiliations">
+            <span class="affil-badge">Zhuang LiuAffiliation:Princeton University</span>
+          </div>
+          
+        
+      </div>
+    </div>
+    
+    <div class="paper">
+      <div class="paper-title">
+        <a href="https://arxiv.org/abs/2611.24433v1" target="_blank">MLIE-CoT: Chain-of-Thought Reasoning via Multi-Level Image Editing</a>
+        <span class="score">74</span>
+        <span class="subscores">相关 34 · 新颖 21 · 质量 19</span>
+        
+        
+      </div>
+      
+      <div class="summary">提出基于多级图像编辑的视觉思维链MLIE-CoT，由路由器按错误严重程度在局部修复、整图编辑与纯文本重生成三级间选择，保留正确语义并抑制幻觉累积，在多个基准上显著优于基座模型与固定修复策略。</div>
+      <div class="tags">
+        
+        <span class="tag">chain-of-thought</span>
+        
+        <span class="tag">image editing</span>
+        
+        <span class="tag">multimodal</span>
+        
+        <span class="tag">hallucination</span>
+        
+        <span class="tag">router</span>
+        
+      </div>
+      <div class="authors">
+        
+          <div class="author-names">
+            Baichuan Yang <span class="h-index">h=4</span>, Dongyuan Xu <span class="h-index">h=16</span>, Zhao Yang, Yong Liu <span class="h-index">h=22</span>, Bing Su <span class="h-index">h=74</span>
+            <span class="h-badge">max h=74</span>
+          </div>
+          
+          
+            
+              
+            
+          
+            
+              
+            
+          
+            
+          
+            
+              
+            
+          
+            
+              
+            
+          
+          
+          <div class="author-affiliations">
+            <span class="affil-badge">Fuzhou University</span><span class="affil-badge">Yanbian University</span><span class="affil-badge">People's Hospital of Xinjiang Uygur Autonomous Region</span><span class="affil-badge">Shanghai Jiao Tong University</span>
+          </div>
+          
+        
+      </div>
+    </div>
+    
+    <div class="paper">
+      <div class="paper-title">
+        <a href="https://arxiv.org/abs/2611.23616v1" target="_blank">Isthmus: Bridging Supervision Islands Restores Uncertainty and Stability in One-Step Flows</a>
+        <span class="score">74</span>
+        <span class="subscores">相关 30 · 新颖 23 · 质量 21</span>
+        
+        
+      </div>
+      
+      <div class="summary">指出一步流映射作为后验采样器会丢失样本方差且训练不稳定，根源是时间对被置于「监督孤岛」，提出仅将5%训练对沿时间三角边缘放置的「isthmus」桥接，在零额外开销下恢复MRI重建一步采样的校准到0.96、与多步样本相关性0.93。</div>
+      <div class="tags">
+        
+        <span class="tag">one-step generation</span>
+        
+        <span class="tag">flow matching</span>
+        
+        <span class="tag">posterior sampling</span>
+        
+        <span class="tag">uncertainty</span>
+        
+        <span class="tag">training stability</span>
+        
+      </div>
+      <div class="authors">
+        
+          <div class="author-names">
+            Luming Yang, Siqing Li, Haoxian Liu, Zhenyu Bu, Jiazheng Zhu, Alper Yilmaz
+            
+          </div>
+          
+          
+            
+              
+            
+          
+            
+          
+            
+          
+            
+          
+            
+          
+            
+          
+          
+          <div class="author-affiliations">
+            <span class="affil-badge">Luming YangAffiliation:The Ohio State University</span>
+          </div>
+          
+        
+      </div>
+    </div>
+    
+    <div class="paper">
+      <div class="paper-title">
+        <a href="https://arxiv.org/abs/2611.22820v1" target="_blank">Pixel is All You Need</a>
+        <span class="score">74</span>
+        <span class="subscores">相关 30 · 新颖 24 · 质量 20</span>
+        
+        
+      </div>
+      <div class="tldr">This is the first systematic study of these phenomena in purely pixel-space generative models free of text tokens, and sharing one canvas allows the same model to reason across modalities, a capability that text-only language models lack.</div>
+      <div class="summary">系统研究纯像素空间生成模型（无任何文本通路）能否在画布上做符号推理，发现现有生成器的视觉模块无法独立推理而纯像素模型却展现出类LLM的规模幂律与逐帧思维链效应、RL后训练进一步增强推理，甚至可跨模态推理。</div>
+      <div class="tags">
+        
+        <span class="tag">pixel-space</span>
+        
+        <span class="tag">reasoning</span>
+        
+        <span class="tag">unified multimodal</span>
+        
+        <span class="tag">scaling law</span>
+        
+        <span class="tag">chain-of-thought</span>
+        
+      </div>
+      <div class="authors">
+        
+          <div class="author-names">
+            Jie Chu <span class="h-index">h=2</span>, Haoting Shi <span class="h-index">h=3</span>, Fucheng Zhang <span class="h-index">h=0</span>, Jiawei Liu <span class="h-index">h=0</span>, Junwei Liao <span class="h-index">h=8</span>, Ying Wen, Muning Wen
+            <span class="h-badge">max h=8</span>
+          </div>
+          
+          
+            
+              
+            
+          
+            
+          
+            
+          
+            
+          
+            
+          
+            
+          
+            
+          
+          
+          <div class="author-affiliations">
+            <span class="affil-badge">Jie ChuAffiliation:Shanghai Jiao Tong UniversityAffiliation:Shanghai Innovation Institute</span>
+          </div>
+          
+        
+      </div>
+    </div>
+    
+    <div class="paper">
+      <div class="paper-title">
+        <a href="https://arxiv.org/abs/2611.21865v1" target="_blank">PromptPack: Training-Free Augmentation of Diffusion Editors for Intent-Aligned Spatial and Semantic Control</a>
+        <span class="score">74</span>
+        <span class="subscores">相关 33 · 新颖 21 · 质量 20</span>
+        
+        
+      </div>
+      <div class="tldr">In a pairwise user study, PromptPack achieves an 87% preference rate over FlowEdit FLUX, establishing PromptPack as a practical, training-free interface for intent-aligned diffusion editing.</div>
+      <div class="summary">提出免训练的PromptPack，为扩散编辑器引入Keep/Permit/Modify编辑角色分区与区域-提示绑定两种Edit Guide，通过区域提示打包与注意力掩码实现意图对齐的空间与语义控制，在PIE-Bench++上三个编辑器均改善概念放置与保护内容保持，用户研究偏好率87%。</div>
+      <div class="tags">
+        
+        <span class="tag">image editing</span>
+        
+        <span class="tag">training-free</span>
+        
+        <span class="tag">spatial control</span>
+        
+        <span class="tag">regional prompt</span>
+        
+        <span class="tag">attention masking</span>
+        
+      </div>
+      <div class="authors">
+        
+          <div class="author-names">
+            Sophia Zalewski <span class="h-index">h=5</span>, Mustafa Munir <span class="h-index">h=8</span>, Enting Liu <span class="h-index">h=0</span>, Anjul Patney <span class="h-index">h=21</span>, David Dynerman <span class="h-index">h=0</span>
+            <span class="h-badge">max h=21</span>
+          </div>
+          
+          
+            
+              
+            
+          
+            
+          
+            
+          
+            
+          
+            
+          
+          
+          <div class="author-affiliations">
+            <span class="affil-badge">NVIDIA</span>
+          </div>
+          
+        
+      </div>
+    </div>
+    
+    <div class="paper">
+      <div class="paper-title">
+        <a href="https://arxiv.org/abs/2611.22318v1" target="_blank">Breaking Visual Conventions: Spectrally Coupled Weight Perturbation for Creative Image Generation</a>
+        <span class="score">73</span>
+        <span class="subscores">相关 33 · 新颖 22 · 质量 18</span>
+        
+        
+      </div>
+      <div class="tldr">This work introduces Coupled Spectral Perturbation (CosPert), a training-free method that targets attention projections in layers identified by a one-time sensitivity analysis and achieves the highest mean CREward among the evaluated methods while maintaining strong prompt alignment.</div>
+      <div class="summary">提出免训练的CosPert，通过对敏感层注意力投影做耦合谱扰动（共享随机变换扰动奇异向量与谱增益）并以sigmoid调度集中于早期去噪，提升文生图的视觉创造性与结构多样性同时保持类别与提示对齐，在FLUX.1与SD3.5上取得最高平均CREward。</div>
+      <div class="tags">
+        
+        <span class="tag">creativity</span>
+        
+        <span class="tag">weight perturbation</span>
+        
+        <span class="tag">text-to-image</span>
+        
+        <span class="tag">training-free</span>
+        
+        <span class="tag">spectral</span>
+        
+      </div>
+      <div class="authors">
+        
+          <div class="author-names">
+            Fu Feng <span class="h-index">h=9</span>, Ruoheng Zhou <span class="h-index">h=0</span>, Yucheng Xie <span class="h-index">h=8</span>, Xu Yang <span class="h-index">h=9</span>, Jing Wang <span class="h-index">h=3</span>, Xin Geng
+            <span class="h-badge">max h=9</span>
+          </div>
+          
+          
+            
+          
+            
+              
+            
+          
+            
+              
+            
+          
+            
+              
+            
+          
+            
+              
+            
+          
+            
+              
+            
+          
+          
+          <div class="author-affiliations">
+            <span class="affil-badge">School of Computer Science and Engineering, Southeast University, Nanjing, China</span><span class="affil-badge">Yeshiva University</span><span class="affil-badge">Wuyi University</span><span class="affil-badge">The University of Texas MD Anderson Cancer Center</span><span class="affil-badge">Key Laboratory of New Generation Artificial Intelligence Technology and Its Interdisciplinary Applications (Southeast University), Ministry of Education, China</span>
+          </div>
+          
+        
+      </div>
+    </div>
+    
+    <div class="paper">
+      <div class="paper-title">
+        <a href="https://arxiv.org/abs/2611.23929v1" target="_blank">ProxySearch: Decoupled Inference-Time Scaling for Diffusion Models via Asymmetric Noise-Rank Transfer</a>
+        <span class="score">72</span>
+        <span class="subscores">相关 32 · 新颖 22 · 质量 18</span>
+        
+        
+      </div>
+      
+      <div class="summary">系统测量蒸馏少步代理与教师在噪声搜索中的排序一致性，发现闭式图像统计可高一致迁移（Spearman ρ达0.80）而语义评分器不行（ρ≤0.12），据此提出ProxySearch用代理一步筛统计候选、教师选语义最优，在FLUX-1024同等教师轨迹数下将统计目标收紧21-23%。</div>
+      <div class="tags">
+        
+        <span class="tag">inference-time scaling</span>
+        
+        <span class="tag">noise search</span>
+        
+        <span class="tag">distillation</span>
+        
+        <span class="tag">text-to-image</span>
+        
+        <span class="tag">reward</span>
+        
+      </div>
+      <div class="authors">
+        
+          <div class="author-names">
+            Seungwook Kim, Jongmin Lee
+            
+          </div>
+          
+          
+            
+              
+            
+          
+            
+          
+          
+          <div class="author-affiliations">
+            <span class="affil-badge">Jongmin LeeAffiliation:Chung-Ang UniversityEmail:jmlee@cau.ac.kr</span>
+          </div>
+          
+        
+      </div>
+    </div>
+    
+    <div class="paper">
+      <div class="paper-title">
+        <a href="https://arxiv.org/abs/2611.22052v1" target="_blank">RiDEx: Reward-Informed Directional Exploration for Diffusion Reinforcement Learning</a>
+        <span class="score">72</span>
+        <span class="subscores">相关 31 · 新颖 22 · 质量 19</span>
+        
+        
+      </div>
+      <div class="tldr">This work introduces Reward-Informed Directional Exploration (RiDEx), which concentrates local exploration in reward-relevant subspaces of the denoising velocity field and achieves the highest peak rewards among the evaluated methods on four alignment and preference tasks.</div>
+      <div class="summary">提出奖励知情的方向性探索RiDEx，将扩散强化学习的局部探索集中在去噪速度场的奖励相关子空间并用等量反向扰动测量回报差异作为局部监督，在SD3.5 Medium四个对齐与偏好任务上取得最高峰值奖励，梯度版较DiffusionNFT在HPSv2/PickScore上加速15×/29×。</div>
+      <div class="tags">
+        
+        <span class="tag">diffusion RL</span>
+        
+        <span class="tag">reward alignment</span>
+        
+        <span class="tag">exploration</span>
+        
+        <span class="tag">post-training</span>
+        
+        <span class="tag">preference optimization</span>
+        
+      </div>
+      <div class="authors">
+        
+          <div class="author-names">
+            Song Yan <span class="h-index">h=2</span>, Chenfeng Wang <span class="h-index">h=1</span>, Wei Zhai <span class="h-index">h=4</span>, Xingchen Wang <span class="h-index">h=0</span>, Tao Zhang <span class="h-index">h=2</span>, Yawen Shao, Shi Pan, Min Li, Zheng-Jun Zha
+            <span class="h-badge">max h=4</span>
+          </div>
+          
+          
+            
+              
+            
+          
+            
+          
+            
+          
+            
+          
+            
+          
+            
+          
+            
+          
+            
+          
+            
+          
+          
+          <div class="author-affiliations">
+            <span class="affil-badge">Tao ZhangAffiliation:University of Science and Technology of China  Li Auto Inc.  Huazhong University of Science and Technology</span>
+          </div>
+          
+        
+      </div>
+    </div>
+    
+    <div class="paper">
+      <div class="paper-title">
+        <a href="https://arxiv.org/abs/2611.23155v1" target="_blank">TextSphere: Efficient Text-to-Image Generation via Shared Hyperspherical Alignment and Uniformity</a>
+        <span class="score">71</span>
+        <span class="subscores">相关 36 · 新颖 18 · 质量 17</span>
+        
+        
+      </div>
+      <div class="tldr">This work proposes TextSphere, an efficient text-to-image generative framework that extends Sphere Encoder with language conditioning and cross-modal alignment, and introduces a Spherical Semantic Alignment and Uniformity objective that jointly promotes semantic alignment and representation uniformity on the hypersphere.</div>
+      <div class="summary">提出TextSphere将Sphere Encoder扩展到自由文本生成，用CLIP文本嵌入经AdaLN条件化并引入球面语义对齐与均匀性目标SSAU，仅4-6步采样即在CUB-200与MS-COCO上gFID优于从头训练的扩散与GAN基线，rFID低于1.0。</div>
+      <div class="tags">
+        
+        <span class="tag">text-to-image</span>
+        
+        <span class="tag">efficient generation</span>
+        
+        <span class="tag">few-step</span>
+        
+        <span class="tag">contrastive alignment</span>
+        
+        <span class="tag">hypersphere</span>
+        
+      </div>
+      <div class="authors">
+        
+          <div class="author-names">
+            Yixia Zhang <span class="h-index">h=1</span>, Girish A. Koushik <span class="h-index">h=3</span>, Xilu Wang <span class="h-index">h=17</span>, Wenwu Wang <span class="h-index">h=4</span>
+            <span class="h-badge">max h=17</span>
+          </div>
+          
+          
+            
+              
+            
+          
+            
+          
+            
+          
+            
+          
+          
+          <div class="author-affiliations">
+            <span class="affil-badge">Xilu WangAffiliation:Department of Computer ScienceAffiliation:University of SurreyAffiliation:Guildford, United KingdomEmail:{yixia.zhang,g.koushik,wangxilu}@surrey.ac.uk</span>
+          </div>
+          
+        
+      </div>
+    </div>
+    
+    <div class="paper">
+      <div class="paper-title">
+        <a href="https://arxiv.org/abs/2611.22969v1" target="_blank">Rescaling OLS-Merged Adapters To Improve Personalized Image Generation</a>
+        <span class="score">70</span>
+        <span class="subscores">相关 30 · 新颖 19 · 质量 21</span>
+        
+        
+      </div>
+      <div class="tldr">This work shows that this reconstruction objective systematically shrinks task-specific signals whenever the activation distributions of different tasks overlap, producing a merged adapter that is too weak for downstream use and derives a decomposition that quantifies this shrinkage and proposes rescaling the merged update to restore signal strength.</div>
+      <div class="summary">分析发现OLS类适配器合并方法因激活分布重叠而系统性收缩任务特定信号，提出对合并更新做重缩放恢复信号强度，在最多30个适配器合并的多主体个性化中显著提升主体保真度，并在风格迁移、概念擦除、分类等任务上同样有效。</div>
+      <div class="tags">
+        
+        <span class="tag">adapter merging</span>
+        
+        <span class="tag">personalization</span>
+        
+        <span class="tag">LoRA</span>
+        
+        <span class="tag">OLS</span>
+        
+        <span class="tag">shrinkage</span>
+        
+      </div>
+      <div class="authors">
+        
+          <div class="author-names">
+            Leander Girrbach <span class="h-index">h=7</span>, Niklas Schweiger <span class="h-index">h=0</span>, Zeynep Akata <span class="h-index">h=26</span>
+            <span class="h-badge">max h=26</span>
+          </div>
+          
+          
+            
+              
+            
+          
+            
+          
+            
+          
+          
+          <div class="author-affiliations">
+            <span class="affil-badge">Leander GirrbachAffiliation:Technical University of Munich (TUM)Munich Center for Machine Learning (MCML)Affiliation:Helmholtz Munich</span>
+          </div>
+          
+        
+      </div>
+    </div>
+    
+    <div class="paper">
+      <div class="paper-title">
+        <a href="https://arxiv.org/abs/2611.21867v1" target="_blank">FaceRiff: Data-Efficient Unified Text-to-3D Face Asset Synthesis via Geometric Conditioning</a>
+        <span class="score">70</span>
+        <span class="subscores">相关 30 · 新颖 19 · 质量 21</span>
+        
+        
+      </div>
+      <div class="tldr">FaceRiff demonstrates that pretrained diffusion priors can be adapted to unified 3D face asset synthesis under limited data, and achieves substantially higher perceived realism than DreamFace, approaching that of real captures.</div>
+      <div class="summary">提出FaceRiff，以UV法线图为几何条件、任务LoRA适配冻结SDXL，仅用2049个扫描（约350人）、单卡、每任务不到3%参数即从文本生成完整3D人脸资产（网格、反照率、位移），兼具PBR无关光照纹理与毛孔级位移，45名行业专家盲评中真实感显著优于DreamFace。</div>
+      <div class="tags">
+        
+        <span class="tag">3D face</span>
+        
+        <span class="tag">text-to-3D</span>
+        
+        <span class="tag">LoRA</span>
+        
+        <span class="tag">SDXL</span>
+        
+        <span class="tag">UV texture</span>
+        
+      </div>
+      <div class="authors">
+        
+          <div class="author-names">
+            Elly Akhoundi <span class="h-index">h=2</span>, Mathieu Lamarre <span class="h-index">h=2</span>, Thibault Goyallon <span class="h-index">h=2</span>, Patrick Anderson <span class="h-index">h=8</span>, Étienne Danvoye <span class="h-index">h=4</span>
+            <span class="h-badge">max h=8</span>
+          </div>
+          
+          
+            
+              
+            
+          
+            
+          
+            
+          
+            
+          
+            
+          
+          
+          <div class="author-affiliations">
+            <span class="affil-badge">Electronic Arts</span>
+          </div>
+          
+        
+      </div>
+    </div>
+    
+  </div>
+  
+  <div class="category" id="cat-4">
+    <h2>多模态大模型 (17)</h2>
+    
+    <div class="paper">
+      <div class="paper-title">
+        <a href="https://arxiv.org/abs/2611.22351v1" target="_blank">Scaling Laws for Vision-Language Fusion</a>
+        <span class="score">83</span>
+        <span class="subscores">相关 34 · 新颖 24 · 质量 25</span>
+        
+        
+      </div>
+      <div class="tldr">A scaling law is derived that unifiedly describes the learning dynamics of these multimodal pre-training processes, showing that validation losses during vision-language fusion can be modeled by separating the base learning trajectory from a distribution shift driven by the competition between modalities.</div>
+      <div class="summary">系统分析视觉-语言预训练融合的学习动态，将验证损失分解为基础学习轨迹与模态竞争分布偏移并推导统一scaling law，可跨混合比例、步数、模型规模准确预测损失，指出固定数据预算下早期融合保文本、晚期融合优视觉且随规模增大越来越偏向早期融合。</div>
+      <div class="tags">
+        
+        <span class="tag">scaling law</span>
+        
+        <span class="tag">vision-language</span>
+        
+        <span class="tag">pre-training</span>
+        
+        <span class="tag">early fusion</span>
+        
+        <span class="tag">multimodal</span>
+        
+      </div>
+      <div class="authors">
+        
+          <div class="author-names">
+            Seng Pei Liew <span class="h-index">h=13</span>, Teppei Suzuki <span class="h-index">h=1</span>, Seiya Tokui <span class="h-index">h=8</span>
+            <span class="h-badge">max h=13</span>
+          </div>
+          
+          
+            
+              
+            
+          
+            
+              
+            
+          
+            
+              
+            
+          
+          
+          <div class="author-affiliations">
+            <span class="affil-badge">Lion Corporation (Japan)</span><span class="affil-badge">Kobe Medical Center</span><span class="affil-badge">Preferred Networks (Japan)</span>
+          </div>
+          
+        
+      </div>
+    </div>
+    
+    <div class="paper">
+      <div class="paper-title">
+        <a href="https://arxiv.org/abs/2611.24785v1" target="_blank">Read Together, Answer Apart: How Earlier Questions Help Vision-Language Models Look</a>
+        <span class="score">76</span>
+        <span class="subscores">相关 33 · 新颖 22 · 质量 21</span>
+        
+        
+      </div>
+      
+      <div class="summary">在22个开源VLM上逐题配对分析共问（多问题同图）行为，发现早期同图问题在预填充中把视觉信息读入问题token帮助后续问题聚焦目标，而损伤发生在解码阶段，据此提出免训练的「Read Together, Answer Apart」解码掩码，在12/14模型上提升共问准确率最高4.71个百分点。</div>
+      <div class="tags">
+        
+        <span class="tag">VLM</span>
+        
+        <span class="tag">co-asking</span>
+        
+        <span class="tag">attention mask</span>
+        
+        <span class="tag">decoding</span>
+        
+        <span class="tag">multi-question</span>
+        
+      </div>
+      <div class="authors">
+        
+          <div class="author-names">
+            Xinyi Guo, Kaile Huang, Xitong Ling, Mingyi He, Chende Zheng, Jianyu Xu, Chao He, Dongqing Song
+            
+          </div>
+          
+          
+            
+              
+            
+          
+            
+          
+            
+          
+            
+          
+            
+          
+            
+          
+            
+          
+            
+          
+          
+          <div class="author-affiliations">
+            <span class="affil-badge">Xitong LingAffiliation:South China Normal University   Tsinghua University</span>
+          </div>
+          
+        
+      </div>
+    </div>
+    
+    <div class="paper">
+      <div class="paper-title">
+        <a href="https://arxiv.org/abs/2611.22456v1" target="_blank">PACD: Provenance-Aware Consensus Decoding for Mitigating Cross-Modal Hallucinations in Omnimodal Large Language Models</a>
+        <span class="score">76</span>
+        <span class="subscores">相关 32 · 新颖 22 · 质量 22</span>
+        
+        
+      </div>
+      <div class="tldr">Provenance-Aware Consensus Decoding (PACD) is proposed, a training-free framework for mitigating cross-modal hallucinations and achieves up to 27.6% relative improvement over standard decoding across CMM, AVHBench, and SVHalluc for cross-modal hallucination mitigation.</div>
+      <div class="summary">提出免训练的PACD框架缓解全模态大模型的跨模态幻觉，非共识时用相关性引导的候选仲裁保留可靠单模态证据，共识时用基于溯源的共识恢复按层级证据选择性纠正错误共识，在四个Omni-LLM上跨模态幻觉抑制相对标准解码最高提升27.6%。</div>
+      <div class="tags">
+        
+        <span class="tag">omnimodal LLM</span>
+        
+        <span class="tag">hallucination</span>
+        
+        <span class="tag">decoding</span>
+        
+        <span class="tag">consensus</span>
+        
+        <span class="tag">training-free</span>
+        
+      </div>
+      <div class="authors">
+        
+          <div class="author-names">
+            Chang Sun <span class="h-index">h=0</span>, Yijun Tian <span class="h-index">h=8</span>, Zhenwei Tang <span class="h-index">h=8</span>, Yuchen Deng <span class="h-index">h=2</span>, Yifan Simon Liu <span class="h-index">h=7</span>, Chenxu Wang, Wei Wang
+            <span class="h-badge">max h=8</span>
+          </div>
+          
+          
+            
+              
+            
+          
+            
+          
+            
+          
+            
+          
+            
+          
+            
+          
+            
+          
+          
+          <div class="author-affiliations">
+            <span class="affil-badge">Chang SunAffiliation:Xi’an Jiaotong University</span>
+          </div>
+          
+        
+      </div>
+    </div>
+    
+    <div class="paper">
+      <div class="paper-title">
+        <a href="https://arxiv.org/abs/2611.24259v1" target="_blank">Do Thinking VLMs Need to Keep Looking at Long Videos? Write It Down, Then Look Away</a>
+        <span class="score">75</span>
+        <span class="subscores">相关 32 · 新颖 23 · 质量 20</span>
+        
+        
+      </div>
+      
+      <div class="summary">提出LookAway，让VLM先写时间戳笔记再隐藏长视频KV缓存进行推理，无需训练即以0.12-0.13倍解码成本接近全视频推理准确率，RL微调后仅66-68个token即可「放下视频」而只读取27-35%的KV位置。</div>
+      <div class="tags">
+        
+        <span class="tag">长视频理解</span>
+        
+        <span class="tag">KV缓存</span>
+        
+        <span class="tag">推理效率</span>
+        
+      </div>
+      <div class="authors">
+        
+          <div class="author-names">
+            Pengyu Li <span class="h-index">h=10</span>, Zhitao Gao <span class="h-index">h=12</span>, Lingling Zhang <span class="h-index">h=53</span>, Heng Wang <span class="h-index">h=45</span>, Chengqian Ma <span class="h-index">h=8</span>, WenHao Wang <span class="h-index">h=36</span>, Wenxuan Huang <span class="h-index">h=30</span>, Chen Zheng, Jun Liu <span class="h-index">h=132</span>
+            <span class="h-badge">max h=132</span>
+          </div>
+          
+          
+            
+              
+            
+          
+            
+              
+            
+          
+            
+              
+            
+          
+            
+              
+            
+          
+            
+              
+            
+          
+            
+              
+            
+          
+            
+              
+            
+          
+            
+          
+            
+              
+            
+          
+          
+          <div class="author-affiliations">
+            <span class="affil-badge">Guilin University of Technology</span><span class="affil-badge">Henan Medical University</span><span class="affil-badge">Henan University</span><span class="affil-badge">Kunming University of Science and Technology</span><span class="affil-badge">Nanjing University of Science and Technology</span><span class="affil-badge">Anhui University</span><span class="affil-badge">Tongji University</span><span class="affil-badge">Pacific Northwest National Laboratory</span>
+          </div>
+          
+        
+      </div>
+    </div>
+    
+    <div class="paper">
+      <div class="paper-title">
+        <a href="https://arxiv.org/abs/2611.24161v1" target="_blank">AVTR: Adaptive Multimodal Reasoning with Visual Imagination</a>
+        <span class="score">75</span>
+        <span class="subscores">相关 33 · 新颖 22 · 质量 20</span>
+        
+        
+      </div>
+      
+      <div class="summary">提出AVTR，通过「视觉想象」作为文本推理的互补模态并用学习式路由按需选择推理方式，在16个基准上比Qwen3.5基线平均提升4.5分、推理延迟降低33%，且可有效扩展到2B小模型。</div>
+      <div class="tags">
+        
+        <span class="tag">视觉推理</span>
+        
+        <span class="tag">推理路由</span>
+        
+        <span class="tag">视觉想象</span>
+        
+      </div>
+      <div class="authors">
+        
+          <div class="author-names">
+            Xiaoqian Shen, Yunyang Xiong, Changsheng Zhao, Saksham Suri, Chong Zhou, Zechun Liu, Zhipeng Cai, Zhuang Liu, Qi Qian, Wei Wen, Hongyu Xu, Hanxian Huang, Ernie Chang, Yanbei Chen, Vikas Chandra, Raghuraman Krishnamoorthi, Mohamed Elhoseiny, Lemeng Wu
+            
+          </div>
+          
+          
+            
+              
+            
+          
+            
+          
+            
+          
+            
+          
+            
+          
+            
+          
+            
+          
+            
+          
+            
+          
+            
+          
+            
+          
+            
+          
+            
+          
+            
+          
+            
+          
+            
+          
+            
+          
+            
+          
+          
+          <div class="author-affiliations">
+            <span class="affil-badge">Xiaoqian ShenAffiliation:Meta AIAffiliation:King Abdullah University of Science and Technology (KAUST)Work done at Meta</span>
+          </div>
+          
+        
+      </div>
+    </div>
+    
+    <div class="paper">
+      <div class="paper-title">
+        <a href="https://arxiv.org/abs/2611.23209v1" target="_blank">Learning Grounded Reasoning from Human Gaze</a>
+        <span class="score">75</span>
+        <span class="subscores">相关 32 · 新颖 21 · 质量 22</span>
+        
+        
+      </div>
+      <div class="tldr">GGR (Gaze-Guided Reasoner), which achieves greater human alignment and more reliable visual grounding while matching or outperforming leading grounded-reasoning baselines in accuracy and reinforcement learning further improves task accuracy, gaze alignment, and grounding quality despite using no gaze supervision.</div>
+      <div class="summary">收集7109条人类注视数据并提出GGR注视引导推理器，发现将人类注视作为先验优于全序列监督，在图表理解、视觉搜索与计数上匹配或超越基线且更符合人类行为。</div>
+      <div class="tags">
+        
+        <span class="tag">人类注视</span>
+        
+        <span class="tag">视觉接地推理</span>
+        
+        <span class="tag">多模态对齐</span>
+        
+      </div>
+      <div class="authors">
+        
+          <div class="author-names">
+            Gabriel Sarch <span class="h-index">h=9</span>, Declan Campbell <span class="h-index">h=7</span>, Nicholas Budny <span class="h-index">h=1</span>, Kia Ghods <span class="h-index">h=2</span>, Katerina Fragkiadaki <span class="h-index">h=35</span>, Jonathan D. Cohen, Brenden M. Lake, Taylor W. Webb
+            <span class="h-badge">max h=35</span>
+          </div>
+          
+          
+            
+              
+            
+          
+            
+          
+            
+          
+            
+          
+            
+          
+            
+          
+            
+          
+            
+          
+          
+          <div class="author-affiliations">
+            <span class="affil-badge">Princeton University  Perceptron AI  Carnegie Mellon UniversityCorresponding author:∗Equal contribution†Joint supervision</span>
+          </div>
+          
+        
+      </div>
+    </div>
+    
+    <div class="paper">
+      <div class="paper-title">
+        <a href="https://arxiv.org/abs/2611.24793v1" target="_blank">The Elephant in the Question: Unified Models Picture the Concepts Behind Their Answers</a>
+        <span class="score">74</span>
+        <span class="subscores">相关 31 · 新颖 23 · 质量 20</span>
+        
+        
+      </div>
+      
+      <div class="summary">提出V-lens无需训练解码器即可可视化统一多模态模型某token隐藏状态中的中间概念，并进一步提出lens tuning，使代词指代的正确可视化率从2-11%升至86-94%，还意外改善了文本答案。</div>
+      <div class="tags">
+        
+        <span class="tag">可解释性</span>
+        
+        <span class="tag">统一多模态模型</span>
+        
+        <span class="tag">隐藏状态可视化</span>
+        
+      </div>
+      <div class="authors">
+        
+          <div class="author-names">
+            Tobias Braun, Marcus Rohrbach, Lorenzo Cavallaro
+            
+          </div>
+          
+          
+            
+              
+            
+          
+            
+          
+            
+          
+          
+          <div class="author-affiliations">
+            <span class="affil-badge">Lorenzo CavallaroAffiliation:Technische Universität Darmstadt  University College London  Mohamed bin Zayed University of Artificial Intelligence</span>
+          </div>
+          
+        
+      </div>
+    </div>
+    
+    <div class="paper">
+      <div class="paper-title">
+        <a href="https://arxiv.org/abs/2611.24184v1" target="_blank">VideoACE: Benchmarking Agentic Video Understanding through High-Frame-Rate Actions</a>
+        <span class="score">74</span>
+        <span class="subscores">相关 33 · 新颖 21 · 质量 20</span>
+        
+        
+      </div>
+      
+      <div class="summary">提出VideoACE基准，用1000道高帧率细粒度动作选择题配合视频工具与用户模拟器评估智能体式视频理解，发现不同模型在证据获取与交互深度上差异显著（如Gemini 3.6 Flash工具使用带来14.2分提升）。</div>
+      <div class="tags">
+        
+        <span class="tag">智能体视频理解</span>
+        
+        <span class="tag">基准评测</span>
+        
+        <span class="tag">工具使用</span>
+        
+      </div>
+      <div class="authors">
+        
+          <div class="author-names">
+            Luoyuan Zhang, Xuanyu Zheng, Yancheng Long, Haoyang Xu, Bin Wen, Tingting Gao
+            
+          </div>
+          
+          
+            
+              
+            
+          
+            
+          
+            
+          
+            
+          
+            
+          
+            
+          
+          
+          <div class="author-affiliations">
+            <span class="affil-badge">KlingAI Research</span>
+          </div>
+          
+        
+      </div>
+    </div>
+    
+    <div class="paper">
+      <div class="paper-title">
+        <a href="https://arxiv.org/abs/2611.21812v1" target="_blank">Sketch, Don't Paint: Allocating Test-Time Compute in Generative Visual Reasoning</a>
+        <span class="score">74</span>
+        <span class="subscores">相关 32 · 新颖 22 · 质量 20</span>
+        
+        
+      </div>
+      <div class="tldr">This work studies how to allocate test-time compute along two axes: when to render visual thoughts rather than thinking in text or answering directly, and how many denoising steps each thought requires, and how many denoising steps each thought requires.</div>
+      <div class="summary">研究生成式视觉推理中测试时计算分配，发现视觉「思考」常属装饰性甚至有害、8步草图近似50步渲染精度，提出的sketch-and-vote无需训练即在图像与视频推理器上以更少去噪步数提升8.6至22.1分。</div>
+      <div class="tags">
+        
+        <span class="tag">测试时计算</span>
+        
+        <span class="tag">视觉思维</span>
+        
+        <span class="tag">扩散推理</span>
+        
+      </div>
+      <div class="authors">
+        
+          <div class="author-names">
+            Sheng Lu <span class="h-index">h=0</span>, Guangpin Tao <span class="h-index">h=5</span>, Tong Lu <span class="h-index">h=0</span>, Ying Tai <span class="h-index">h=49</span>
+            <span class="h-badge">max h=49</span>
+          </div>
+          
+          
+            
+              
+            
+          
+            
+          
+            
+          
+            
+          
+          
+          <div class="author-affiliations">
+            <span class="affil-badge">Ying TaiAffiliation:State Key Laboratory for Novel Software Technology, Nanjing UniversityAffiliation:{shenglu,tgpin}@smail.nju.edu.cn    {lutong,yingtai}@nju.edu.cn</span>
+          </div>
+          
+        
+      </div>
+    </div>
+    
+    <div class="paper">
+      <div class="paper-title">
+        <a href="https://arxiv.org/abs/2611.22438v1" target="_blank">Eyes in the Update? Learning Where Rewards Land in Multimodal Reasoning</a>
+        <span class="score">74</span>
+        <span class="subscores">相关 30 · 新颖 23 · 质量 21</span>
+        
+        
+      </div>
+      <div class="tldr">This work proposes Gaze-RL, a representation-driven policy optimization method that redistributes completion-level advantage through a latent reward landing field, and improves both Qwen2.5-VL and InternVL3.5 across a broad range of image and video benchmarks.</div>
+      <div class="summary">提出Gaze-RL，用内部跨模态几何与预测不确定性构建均值为一的「奖励落点场」，将轨迹级奖励重新分配到视觉锚定且关键决策的位置，无需过程监督即在Qwen2.5-VL与InternVL3.5的图像和视频基准上一致提升。</div>
+      <div class="tags">
+        
+        <span class="tag">多模态强化学习</span>
+        
+        <span class="tag">信用分配</span>
+        
+        <span class="tag">后训练</span>
+        
+      </div>
+      <div class="authors">
+        
+          <div class="author-names">
+            Lixuan He <span class="h-index">h=4</span>, Tianzhe Chu <span class="h-index">h=7</span>, Shulin Tian <span class="h-index">h=9</span>, Shikang Zheng <span class="h-index">h=7</span>, Feng Chen <span class="h-index">h=1</span>, Yi Ma <span class="h-index">h=94</span>
+            <span class="h-badge">max h=94</span>
+          </div>
+          
+          
+            
+              
+            
+          
+            
+              
+            
+          
+            
+              
+            
+          
+            
+              
+            
+          
+            
+              
+            
+          
+            
+              
+            
+          
+          
+          <div class="author-affiliations">
+            <span class="affil-badge">University of North Texas</span><span class="affil-badge">Chengdu University of Traditional Chinese Medicine</span><span class="affil-badge">University of Electronic Science and Technology of China</span><span class="affil-badge">Sun Yat-sen University</span><span class="affil-badge">Northwestern University</span><span class="affil-badge">Tianjin University</span>
+          </div>
+          
+        
+      </div>
+    </div>
+    
+    <div class="paper">
+      <div class="paper-title">
+        <a href="https://arxiv.org/abs/2611.24240v1" target="_blank">ViLFlow: Parallel Vision-Language Generation with Continuous Latent Flows</a>
+        <span class="score">73</span>
+        <span class="subscores">相关 32 · 新颖 23 · 质量 18</span>
+        
+        
+      </div>
+      
+      <div class="summary">提出ViLFlow连续流视觉语言模型，联合建模输出嵌入并并行解码token，通过图像引导与预测感知解码器在VQAv2上比自回归和掩码扩散基线最高提升8.46个百分点、COCO描述CIDEr提升16.25以上。</div>
+      <div class="tags">
+        
+        <span class="tag">连续流生成</span>
+        
+        <span class="tag">图文生成</span>
+        
+        <span class="tag">并行解码</span>
+        
+      </div>
+      <div class="authors">
+        
+          <div class="author-names">
+            Kevin Zhai, Bian Sun, Zhenyi Wang, Song Wang
+            
+          </div>
+          
+          
+            
+              
+            
+          
+            
+          
+            
+          
+            
+          
+          
+          <div class="author-affiliations">
+            <span class="affil-badge">Song Wang††thanks:Correspondence tosong.wang@ucf.eduAffiliation:University of Central FloridaAffiliation:Institute of Artificial Intelligence</span>
+          </div>
+          
+        
+      </div>
+    </div>
+    
+    <div class="paper">
+      <div class="paper-title">
+        <a href="https://arxiv.org/abs/2611.23996v1" target="_blank">ReSynth: Constructing Synthetic Supervision for Multi-Image Understanding</a>
+        <span class="score">73</span>
+        <span class="subscores">相关 32 · 新颖 20 · 质量 21</span>
+        
+        
+      </div>
+      
+      <div class="summary">提出ReSynth流水线，结合Qwen3-VL-8B的描述/定位/计数能力与Qwen-Image-2.1的生成编辑能力，从单图自动构造视图变化、前后对比等多图关系型合成监督（约44万题，全程不含真实图像），用GRPO训练后Qwen2.5-VL-7B与Qwen3-VL-8B在BLINK、MUIRBench、VLM2-Bench上平均提升17.73和6.10分，8B感知模型甚至超越Qwen3-VL-235B，且单图能力基本保持。</div>
+      <div class="tags">
+        
+        <span class="tag">多图理解</span>
+        
+        <span class="tag">合成数据</span>
+        
+        <span class="tag">可控生成</span>
+        
+        <span class="tag">GRPO</span>
+        
+        <span class="tag">视觉语言模型</span>
+        
+        <span class="tag">多模态大模型</span>
+        
+      </div>
+      <div class="authors">
+        
+          <div class="author-names">
+            Yilin Wang, Xin Yu, Xinyi Guo, Xiangxi Zheng, Dongxing Mao, Linjie Li, Zhengyuan Yang, Alex Jinpeng Wang
+            
+          </div>
+          
+          
+            
+              
+            
+          
+            
+          
+            
+          
+            
+          
+            
+          
+            
+          
+            
+          
+            
+          
+          
+          <div class="author-affiliations">
+            <span class="affil-badge">Zhengyuan YangAffiliation:ZJU Columbia CSU NJU UW Microsoft</span>
+          </div>
+          
+        
+      </div>
+    </div>
+    
+    <div class="paper">
+      <div class="paper-title">
+        <a href="https://arxiv.org/abs/2611.23808v1" target="_blank">PReMind: When Personal Memory Meets Visual Hazards</a>
+        <span class="score">73</span>
+        <span class="subscores">相关 30 · 新颖 21 · 质量 22</span>
+        
+        
+      </div>
+      
+      <div class="summary">提出PReMind-Bench诊断基准与两阶段强化学习框架PReMind，评测并联合训练视觉危害识别与个人记忆运用，使4B模型在依赖场景上的联合成功率从12.9%提升到28.6%。</div>
+      <div class="tags">
+        
+        <span class="tag">个性化助手</span>
+        
+        <span class="tag">视觉危害</span>
+        
+        <span class="tag">记忆增强</span>
+        
+      </div>
+      <div class="authors">
+        
+          <div class="author-names">
+            Yeongtak Oh, Donghyeok Lee, Joonhee Oh, Jaewon Jeong, Sungroh Yoon
+            
+          </div>
+          
+          
+            
+              
+            
+          
+            
+          
+            
+          
+            
+          
+            
+          
+          
+          <div class="author-affiliations">
+            <span class="affil-badge">Yeongtak OhAffiliation:Department of Electrical and Computer Engineering, Seoul National University</span>
+          </div>
+          
+        
+      </div>
+    </div>
+    
+    <div class="paper">
+      <div class="paper-title">
+        <a href="https://arxiv.org/abs/2611.23962v1" target="_blank">SEE: Unlocking the Hidden Perception of Frozen VLMs</a>
+        <span class="score">72</span>
+        <span class="subscores">相关 32 · 新颖 20 · 质量 20</span>
+        
+        
+      </div>
+      
+      <div class="summary">（占位）</div>
+      <div class="tags">
+        
+      </div>
+      <div class="authors">
+        
+          <div class="author-names">
+            Alin-Ionut Popa, Tuo Zhang, Dimitrios Dimitriadis
+            
+          </div>
+          
+          
+            
+              
+            
+          
+            
+          
+            
+          
+          
+          <div class="author-affiliations">
+            <span class="affil-badge">Dimitrios DimitriadisAffiliation:AmazonAffiliation:{popaaln, tuozhang, dbdim}@amazon.com</span>
+          </div>
+          
+        
+      </div>
+    </div>
+    
+    <div class="paper">
+      <div class="paper-title">
+        <a href="https://arxiv.org/abs/2611.23034v2" target="_blank">M3OPD-Reasoner: An Open Recipe for Post-Training Multimodal Reasoning with Multi-Teacher On-Policy Distillation</a>
+        <span class="score">70</span>
+        <span class="subscores">相关 30 · 新颖 19 · 质量 21</span>
+        
+        
+      </div>
+      <div class="tldr">A comparison establishes MOPD of teachers trained with GSPO directly from Qwen3.5-9B as the best recipe: the student closely matches each teacher on its own domain and is on average above the mixed-training baselines on the same prompts.</div>
+      <div class="summary">提出M3OPD-Reasoner全开放多教师在线策略蒸馏后训练配方与两个数据集，在21个图像STEM、感知和视频推理基准上验证「GSPO多教师+MOPD蒸馏+MixRL」为最佳方案，并开源数据、代码与全部检查点。</div>
+      <div class="tags">
+        
+        <span class="tag">知识蒸馏</span>
+        
+        <span class="tag">后训练配方</span>
+        
+        <span class="tag">开源</span>
+        
+      </div>
+      <div class="authors">
+        
+          <div class="author-names">
+            Nguyen Quang Trung <span class="h-index">h=0</span>, Hoang Phan <span class="h-index">h=11</span>, Shuo Sun <span class="h-index">h=7</span>, Longyin Zhang <span class="h-index">h=3</span>, AiTi Aw <span class="h-index">h=7</span>
+            <span class="h-badge">max h=11</span>
+          </div>
+          
+          
+            
+              
+            
+          
+            
+          
+            
+          
+            
+          
+            
+          
+          
+          <div class="author-affiliations">
+            <span class="affil-badge">Hoang PhanAffiliation:VinUniversityProject Page⋅\cdotCode⋅\cdotData:SFT,RL⋅\cdotCollection</span>
+          </div>
+          
+        
+      </div>
+    </div>
+    
+    <div class="paper">
+      <div class="paper-title">
+        <a href="https://arxiv.org/abs/2611.22094v1" target="_blank">When AUC Meets Generative Reconstruction: A Unified Principle for Balanced Visual Representation Learning</a>
+        <span class="score">70</span>
+        <span class="subscores">相关 26 · 新颖 22 · 质量 22</span>
+        <span class="venue">IEEE Transactions on Pattern Analysis and Machine Intelligence</span>
+        
+      </div>
+      <div class="tldr">This work proposes AUC Generative Reconstruction (AUCGR), which optimizes the area under the ROC curve (AUC) by ensuring higher scores for matched pairs than for mismatched pairs, and Partial AUC Generative Reconstruction (pAUCGR), which addresses supervision bias by focusing on mismatched comparisons within reliable feature subspaces.</div>
+      <div class="summary">提出AUCGR与pAUCGR，把生成重建重构为排序判别问题以同时获得判别力与细粒度感知，作为即插即用目标在CLIP骨干与多模态大模型上兼顾判别精度和感知表示。</div>
+      <div class="tags">
+        
+        <span class="tag">视觉表征学习</span>
+        
+        <span class="tag">生成重建</span>
+        
+        <span class="tag">对比学习</span>
+        
+      </div>
+      <div class="authors">
+        
+          <div class="author-names">
+            Boyu Han <span class="h-index">h=4</span>, Qianqian Xu <span class="h-index">h=32</span>, Shilong Bao <span class="h-index">h=15</span>, Zhiyong Yang <span class="h-index">h=23</span>, Qingming Huang <span class="h-index">h=18</span>
+            <span class="h-badge">max h=32</span>
+          </div>
+          
+          
+            
+              
+            
+          
+            
+              
+            
+          
+            
+          
+            
+              
+            
+          
+            
+          
+          
+          <div class="author-affiliations">
+            <span class="affil-badge">Chinese Academy of Sciences</span><span class="affil-badge">Tongji Hospital</span><span class="affil-badge">OPKO Health (United States)</span>
+          </div>
+          
+        
+      </div>
+    </div>
+    
+    <div class="paper">
+      <div class="paper-title">
+        <a href="https://arxiv.org/abs/2611.21940v1" target="_blank">Does the Model Use What It Cites? Counterfactual Tests of Grounded Reasoning Chains in Small Video-Language Models</a>
+        <span class="score">70</span>
+        <span class="subscores">相关 30 · 新颖 21 · 质量 19</span>
+        
+        
+      </div>
+      <div class="tldr">A grounded reasoning chain cites a frame span and a box for every step, so a reader can check where the model looked, and a test of grounded reasoning should remove what a chain names, not only where it points.</div>
+      <div class="summary">提出无需标注的反事实「cite gap」测试来检验接地推理链是否真正依赖其引用区域，发现CLEVRER上cite gap为0.089而NExT-QA仅0.003，说明引用可验证且相关但答案并不依赖它。</div>
+      <div class="tags">
+        
+        <span class="tag">接地推理</span>
+        
+        <span class="tag">因果检验</span>
+        
+        <span class="tag">视频语言模型</span>
+        
+      </div>
+      <div class="authors">
+        
+          <div class="author-names">
+            Jugal Gajjar <span class="h-index">h=3</span>, Kamalasankari Subramaniakuppusamy <span class="h-index">h=3</span>
+            <span class="h-badge">max h=3</span>
+          </div>
+          
+          
+            
+              
+            
+          
+            
+          
+          
+          <div class="author-affiliations">
+            <span class="affil-badge">Kamalasankari Subramaniakuppusamy*Affiliation:Independent ResearchersAffiliation:812jugalgajjar@gmail.com    iamkamalamskls@gmail.comAffiliation:Code:github.com/JugalGajjar/CausalSight</span>
+          </div>
+          
+        
+      </div>
+    </div>
+    
+  </div>
+  
+  <div class="category" id="cat-5">
+    <h2>底层视觉 (17)</h2>
+    
+    <div class="paper">
+      <div class="paper-title">
+        <a href="https://arxiv.org/abs/2611.24212v1" target="_blank">DetailScale-SR: Decoupling Restoration and Continuous Detail Control for Real-World Super-Resolution</a>
+        <span class="score">82</span>
+        <span class="subscores">相关 38 · 新颖 22 · 质量 22</span>
+        
+        
+      </div>
+      
+      <div class="summary">提出DetailScale-SR偏好条件扩散框架，通过向冻结修复模型的注意力层注入连续标量实现细节程度的连续单调可控，在RealSR和DRealSR上保真度相当，并在中文海报等文字场景中恢复更清晰可靠的文本。</div>
+      <div class="tags">
+        
+        <span class="tag">真实世界超分</span>
+        
+        <span class="tag">细节可控</span>
+        
+        <span class="tag">扩散模型</span>
+        
+        <span class="tag">文本恢复</span>
+        
+      </div>
+      <div class="authors">
+        
+          <div class="author-names">
+            Shengchuan Gao, Zhongjie Duan, Yingda Chen, Jingjing Chen
+            
+          </div>
+          
+          
+            
+              
+            
+          
+            
+          
+            
+          
+            
+          
+          
+          <div class="author-affiliations">
+            <span class="affil-badge">Shengchuan GaoAffiliation:Shanghai Jiao Tong UniversityAffiliation:ModelScope Team, Alibaba GroupEmail:chenjingjing@fudan.edu.cn</span>
+          </div>
+          
+        
+      </div>
+    </div>
+    
+    <div class="paper">
+      <div class="paper-title">
+        <a href="https://arxiv.org/abs/2611.23889v1" target="_blank">Beyond Additive Composition: Interventional Modeling of State-Dependent Cross-Degradation Responses for Composite Image Restoration</a>
+        <span class="score">82</span>
+        <span class="subscores">相关 38 · 新颖 23 · 质量 21</span>
+        
+        
+      </div>
+      
+      <div class="summary">提出PROBE干预式框架，通过统一退化轴、双向特征扰动探测跨退化响应并量化非加性耦合，实现复合图像修复的建模，同时发布SCD-15基准，在CDD-11、AWMM-100K、SCD-15上以紧凑模型达到最优性能。</div>
+      <div class="tags">
+        
+        <span class="tag">复合退化修复</span>
+        
+        <span class="tag">非加性交互</span>
+        
+        <span class="tag">干预式建模</span>
+        
+        <span class="tag">基准</span>
+        
+      </div>
+      <div class="authors">
+        
+          <div class="author-names">
+            Zongda Tang, Jie Feng, Wenda Zhao, Mingtao Feng, Yuping Liang, Ronghua Shang, Weisheng Dong
+            
+          </div>
+          
+          
+            
+              
+            
+          
+            
+          
+            
+          
+            
+          
+            
+          
+            
+          
+            
+          
+          
+          <div class="author-affiliations">
+            <span class="affil-badge">Zongda TangAffiliation:Xidian University</span>
+          </div>
+          
+        
+      </div>
+    </div>
+    
+    <div class="paper">
+      <div class="paper-title">
+        <a href="https://arxiv.org/abs/2611.24915v1" target="_blank">PrismRestore: A Compact Restoration Toolbox for Agentic Image Restoration</a>
+        <span class="score">79</span>
+        <span class="subscores">相关 37 · 新颖 21 · 质量 21</span>
+        
+        
+      </div>
+      
+      <div class="summary">提出PrismRestore智能体修复工具箱，从单一冻结的all-in-one模型通过离线通道先验搜索构建多个可调用修复动作，并用GRPO训练策略自适应组合动作，以单骨干实现优于all-in-one基线、媲美多模型智能体的复合修复质量且推理更快。</div>
+      <div class="tags">
+        
+        <span class="tag">智能体修复</span>
+        
+        <span class="tag">GRPO</span>
+        
+        <span class="tag">通道调制</span>
+        
+        <span class="tag">all-in-one</span>
+        
+      </div>
+      <div class="authors">
+        
+          <div class="author-names">
+            Zhaocheng Yu, Kui Jiang, Jing Cao, Yiang Chen, Xiaocheng Feng, Junjun Jiang, Xianming Liu
+            
+          </div>
+          
+          
+            
+              
+            
+          
+            
+          
+            
+          
+            
+          
+            
+          
+            
+          
+            
+          
+          
+          <div class="author-affiliations">
+            <span class="affil-badge">Xianming LiuAffiliation:Harbin Institute of TechnologyEmail:{yuzhaocheng,caojing,chenya}@stu.hit.edu.cnAffiliation:{jiangkui,jiangjunjun,csxm}@hit.edu.cn,
+xcfeng@ir.hit.edu.cn</span>
+          </div>
+          
+        
+      </div>
+    </div>
+    
+    <div class="paper">
+      <div class="paper-title">
+        <a href="https://arxiv.org/abs/2611.24023v1" target="_blank">STAR++: A Physical-Aware Benchmark and Framework for Astronomical Super-Resolution across Multiple Filters</a>
+        <span class="score">78</span>
+        <span class="subscores">相关 35 · 新颖 20 · 质量 23</span>
+        
+        
+      </div>
+      
+      <div class="summary">发布STAR++天文超分基准，含36个滤光片约170万流量一致的HST图像对与物理性Flux Error指标，并提出FISR++模型通过滤光片感知适配器和空间歧义解耦损失实现跨未见滤光片的流量守恒超分，在质量和流量精度上全面领先。</div>
+      <div class="tags">
+        
+        <span class="tag">天文超分</span>
+        
+        <span class="tag">多滤光片</span>
+        
+        <span class="tag">流量守恒</span>
+        
+        <span class="tag">基准</span>
+        
+      </div>
+      <div class="authors">
+        
+          <div class="author-names">
+            Guohang Zhuang, Jiaze Li, Kuo-cheng Wu, Hao Du, Jinyang Huang, Xiang Zhang, Wanli Ouyang, Yan Lu
+            
+          </div>
+          
+          
+            
+              
+            
+          
+            
+          
+            
+          
+            
+          
+            
+          
+            
+          
+            
+          
+            
+          
+          
+          <div class="author-affiliations">
+            <span class="affil-badge">Yan Lu††thanks:Guohang Zhuang and Jinyang Huang are with the School of Computer Science and Information Engineering, Hefei University of Technology, Hefei 230026, China (e-mail: guohang_zhuang@mail.hfut.edu.cn; hjy@hfut.edu.cn). Guohang Zhuang is also with Shanghai Artificial Intelligence Laboratory, Shanghai 200240, China (e-mail: zhuangguohang@pjlab.org.cn).††thanks:Jiaze Li is with the University of Science and Technology of China, Hefei (jz_li@mail.ustc.edu.cn).††thanks:Hao Du, Kuo-Cheng Wu, Wanli Ouyang, and Yan Lu are with The Chinese University of Hong Kong, Hong Kong (e-mail: dh97@mail.ustc.edu.cn; 12guocheng@gmail.com; wlouyang@ie.cuhk.edu.hk; luyan@pjlab.org.cn).††thanks:Wanli Ouyang and Yan Lu are also with Shanghai Artificial Intelligence Laboratory, Shanghai 200240, China.††thanks:Xiang Zhang is with the School of Cyber Security, Tianjin University, Tianjin, China (e-mail: zhangxiang@ieee.org).††thanks:This work was done during Guohang Zhuang’s internship at Shanghai Artificial Intelligence Laboratory.††thanks:* Guohang Zhuang and Jiaze Li contributed equally to this work.††thanks:This work was supported by the JC STEM Lab of AI for Science and Engineering, funded by The Hong Kong Jockey Club Charities Trust, the Research Grants Council of Hong Kong (Project No. CUHK14213224).</span>
+          </div>
+          
+        
+      </div>
+    </div>
+    
+    <div class="paper">
+      <div class="paper-title">
+        <a href="https://arxiv.org/abs/2611.23717v1" target="_blank">CoScan: Multi-Scale Content-Adaptive Space-Filling Scans for Causal State-Space Image Restoration</a>
+        <span class="score">78</span>
+        <span class="subscores">相关 36 · 新颖 21 · 质量 21</span>
+        
+        
+      </div>
+      
+      <div class="summary">提出CoScan内容自适应空间填充扫描方法，通过可微代理目标学习图像依赖的扫描顺序、由细粒度最小生成树粗化构造多尺度扫描并用频率引导选择起点，即插即用到Mamba修复骨干，在多个修复基准上一致提升且开销极小。</div>
+      <div class="tags">
+        
+        <span class="tag">状态空间模型</span>
+        
+        <span class="tag">扫描顺序</span>
+        
+        <span class="tag">图像修复</span>
+        
+        <span class="tag">Mamba</span>
+        
+      </div>
+      <div class="authors">
+        
+          <div class="author-names">
+            Wei Dong, Terry Ji, Yan Min, Shahram Shirani, Jun Chen, Han Zhou
+            
+          </div>
+          
+          
+            
+              
+            
+          
+            
+          
+            
+          
+            
+          
+            
+          
+            
+          
+          
+          <div class="author-affiliations">
+            <span class="affil-badge">Wei DongAffiliation:McMaster UniversityEmail:dongw22@mcmaster.caAffiliation:Equal Contribution</span>
+          </div>
+          
+        
+      </div>
+    </div>
+    
+    <div class="paper">
+      <div class="paper-title">
+        <a href="https://arxiv.org/abs/2611.22874v1" target="_blank">Harnessing Image Diffusion Prior for Photo-Realistic Video Restoration</a>
+        <span class="score">78</span>
+        <span class="subscores">相关 38 · 新颖 21 · 质量 19</span>
+        
+        
+      </div>
+      <div class="tldr">This method combines noise energy rebalancing to suppress structure-disturbing low-frequency stochasticity, motion-aligned noise warping to propagate details along object motion, a self-supervised denoising encoder to mitigate encoder-induced temporal uncertainty, and decoupled temporal attention to model cross-frame dependencies.</div>
+      <div class="summary">提出HYPI2VR生成式视频修复框架，结合噪声能量重平衡、运动对齐噪声扭曲、自监督去噪编码器与解耦时序注意力，将图像扩散先忠于时序一致地迁移到视频修复，在视觉质量、细节丰富度和时序稳定性上大幅超越现有方法。</div>
+      <div class="tags">
+        
+        <span class="tag">视频修复</span>
+        
+        <span class="tag">扩散先验</span>
+        
+        <span class="tag">时序一致性</span>
+        
+        <span class="tag">生成式增强</span>
+        
+      </div>
+      <div class="authors">
+        
+          <div class="author-names">
+            Fanghua Yu <span class="h-index">h=6</span>, Hongyu An <span class="h-index">h=5</span>, Jinfan Hu <span class="h-index">h=13</span>, Xinqi Lin <span class="h-index">h=5</span>, Zhiyuan You <span class="h-index">h=11</span>, Jian Wang, Hongyang Li, Chao Dong, Jinjin Gu
+            <span class="h-badge">max h=13</span>
+          </div>
+          
+          
+            
+              
+            
+          
+            
+          
+            
+          
+            
+          
+            
+          
+            
+          
+            
+          
+            
+          
+            
+          
+          
+          <div class="author-affiliations">
+            <span class="affil-badge">Fanghua YuAffiliation:The University of Hong KongAffiliation:Shenzhen Loop Area Institute</span>
+          </div>
+          
+        
+      </div>
+    </div>
+    
+    <div class="paper">
+      <div class="paper-title">
+        <a href="https://arxiv.org/abs/2611.22551v1" target="_blank">Fast Training-Free Low-Light Video Enhancement with a Frozen Image Diffusion Prior</a>
+        <span class="score">77</span>
+        <span class="subscores">相关 38 · 新颖 20 · 质量 19</span>
+        
+        
+      </div>
+      <div class="tldr">A causal, training-free pipeline that adds two temporal components to a frozen MR that improves on framewise eight-step processing on held-out SDSD clips and scores better on all five metrics the authors report.</div>
+      <div class="summary">提出免训练的因果式低光视频增强流程，以冻结图像扩散先验为基础加入时序输入融合与延迟启动偏移传播，比ZVRD快261倍且五项指标全面更优，在720p的SDSD片段上较逐帧处理提升0.55dB PSNR并减半扭曲误差。</div>
+      <div class="tags">
+        
+        <span class="tag">低光视频增强</span>
+        
+        <span class="tag">免训练</span>
+        
+        <span class="tag">扩散先验</span>
+        
+        <span class="tag">时序融合</span>
+        
+      </div>
+      <div class="authors">
+        
+          <div class="author-names">
+            Hon Ming Yam <span class="h-index">h=2</span>, Chun Pong Lau <span class="h-index">h=4</span>
+            <span class="h-badge">max h=4</span>
+          </div>
+          
+          
+            
+              
+            
+          
+            
+          
+          
+          <div class="author-affiliations">
+            <span class="affil-badge">Hon Ming YamAffiliation:City University of Hong KongEmail:hmyam4@cityu.edu.hk</span>
+          </div>
+          
+        
+      </div>
+    </div>
+    
+    <div class="paper">
+      <div class="paper-title">
+        <a href="https://arxiv.org/abs/2611.22355v1" target="_blank">SandBAR: A Band-Asymmetric Architecture for Underwater Image Restoration with Removable Frequency Scaffolding</a>
+        <span class="score">77</span>
+        <span class="subscores">相关 35 · 新颖 22 · 质量 20</span>
+        
+        
+      </div>
+      <div class="tldr">This work introduces a novel band-asymmetric sandwich block with a reserved post-attention repair slot, a novel module that applies channel-aware large-support correction to the low band, which predominantly carries large-scale appearance distortions, and lightweight local refinement to the detail-bearing high band thereby restoring global colour while preserving fine structure.</div>
+      <div class="summary">提出SandBAR频带非对称统一水下图像修复架构，用SPARK模块对低频做大感受野通道校正、对高频做轻量精修，并以可移除的PaST训练脚手架提升永久网络，在EUVP/LSUI/UIEB上建立约1.0dB提升的三域均值新最优。</div>
+      <div class="tags">
+        
+        <span class="tag">水下图像修复</span>
+        
+        <span class="tag">频带非对称</span>
+        
+        <span class="tag">脚手架训练</span>
+        
+        <span class="tag">色彩校正</span>
+        
+      </div>
+      <div class="authors">
+        
+          <div class="author-names">
+            Yanzi Liu <span class="h-index">h=0</span>, Haoran Hou <span class="h-index">h=0</span>, Jiachi Tong <span class="h-index">h=0</span>, Shen Chen <span class="h-index">h=0</span>, Shuang Chen <span class="h-index">h=0</span>
+            <span class="h-badge">max h=0</span>
+          </div>
+          
+          
+            
+              
+            
+          
+            
+          
+            
+          
+            
+          
+            
+          
+          
+          <div class="author-affiliations">
+            <span class="affil-badge">Yanzi LiuAffiliation:School of Biomedical Engineering & Imaging Sciences, King’s College London, London, UKEmail:yanzi.liu@kcl.ac.ukjt2522@ic.ac.ukshuang.chen@durham.ac.uk</span>
+          </div>
+          
+        
+      </div>
+    </div>
+    
+    <div class="paper">
+      <div class="paper-title">
+        <a href="https://arxiv.org/abs/2611.22222v1" target="_blank">ExplicitIR: Explicit Spatial Policy Fields for All-in-One Image Restoration</a>
+        <span class="score">77</span>
+        <span class="subscores">相关 37 · 新颖 21 · 质量 19</span>
+        
+        
+      </div>
+      
+      <div class="summary">提出ExplicitIR，将all-in-one修复策略显式表示为逐像素的Budget与Style两个场，由空间策略估计器预测并经策略自适应解码块应用，实现无需任务标签或提示的单次前向空间自适应修复，在三任务和五任务基准上媲美最强基线。</div>
+      <div class="tags">
+        
+        <span class="tag">all-in-one修复</span>
+        
+        <span class="tag">空间自适应</span>
+        
+        <span class="tag">显式策略</span>
+        
+        <span class="tag">去噪</span>
+        
+      </div>
+      <div class="authors">
+        
+          <div class="author-names">
+            Dezhi Zhang <span class="h-index">h=0</span>, Shangrong Yang <span class="h-index">h=9</span>, Yudong Liang <span class="h-index">h=1</span>, Wenjian Wang <span class="h-index">h=3</span>
+            <span class="h-badge">max h=9</span>
+          </div>
+          
+          
+            
+              
+            
+          
+            
+          
+            
+          
+            
+          
+          
+          <div class="author-affiliations">
+            <span class="affil-badge">Wenjian WangEmail:zhangdezhi1@sxu.edu.cnAffiliation:Shanxi University</span>
+          </div>
+          
+        
+      </div>
+    </div>
+    
+    <div class="paper">
+      <div class="paper-title">
+        <a href="https://arxiv.org/abs/2611.23674v1" target="_blank">Learning What to Degrade: A Recoverability-Aware Curriculum for Reliable Smart-Glasses Super-Resolution</a>
+        <span class="score">76</span>
+        <span class="subscores">相关 36 · 新颖 19 · 质量 21</span>
+        
+        
+      </div>
+      
+      <div class="summary">针对智能眼镜超分提出HR参考语义评估协议揭示两类失败模式，并提出ReDiC课程学习策略按可恢复性与难度自适应调整训练退化强度，在NAFNet、SwinIR、MambaIR上平均提升约2.5dB PSNR和约3分语义得分，真实眼镜数据上获LLM与人工验证。</div>
+      <div class="tags">
+        
+        <span class="tag">智能眼镜超分</span>
+        
+        <span class="tag">课程学习</span>
+        
+        <span class="tag">语义评估</span>
+        
+        <span class="tag">可恢复性</span>
+        
+      </div>
+      <div class="authors">
+        
+          <div class="author-names">
+            Yaopeng Wang <span class="h-index">h=7</span>, Qingliang Wang <span class="h-index">h=35</span>, Yilun Jin <span class="h-index">h=19</span>, Xiujin Liu <span class="h-index">h=15</span>, Han Yue <span class="h-index">h=30</span>, Chen Xia <span class="h-index">h=16</span>, Renjie Zhu <span class="h-index">h=16</span>, Chuang Sheng <span class="h-index">h=7</span>
+            <span class="h-badge">max h=35</span>
+          </div>
+          
+          
+            
+              
+            
+          
+            
+              
+            
+          
+            
+              
+            
+          
+            
+              
+            
+          
+            
+              
+            
+          
+            
+              
+            
+          
+            
+              
+            
+          
+            
+              
+            
+          
+          
+          <div class="author-affiliations">
+            <span class="affil-badge">University of Shanghai for Science and Technology</span><span class="affil-badge">Xi'an University of Science and Technology</span><span class="affil-badge">Hong Kong University of Science and Technology</span><span class="affil-badge">Chinese Academy of Sciences</span><span class="affil-badge">Peking University</span><span class="affil-badge">Sir Run Run Shaw Hospital</span><span class="affil-badge">Boston University</span><span class="affil-badge">Huazhong University of Science and Technology</span>
+          </div>
+          
+        
+      </div>
+    </div>
+    
+    <div class="paper">
+      <div class="paper-title">
+        <a href="https://arxiv.org/abs/2611.22898v1" target="_blank">You Only Encode Once: Sub-Pixel-Shifted Frames for Arbitrary-Scale Remote Sensing Super-Resolution with 2D Gaussian Splatting</a>
+        <span class="score">76</span>
+        <span class="subscores">相关 35 · 新颖 21 · 质量 20</span>
+        
+        
+      </div>
+      <div class="tldr">This work proposes SPS-GS (Sub-Pixel-Shifted Gaussian Splatting), an encode-once framework that learns from multi-phase LR observations synthesized from individual high-resolution images, without requiring real multi-frame training sequences.</div>
+      <div class="summary">提出SPS-GS遥感任意尺度超分框架，从合成的亚像素偏移多相观测中仅编码一次，通过相位相干混叠解调聚合互补信息并用高斯投影对齐迭代优化2D高斯泼溅表示，在五个数据集上以高效推理实现强重建性能。</div>
+      <div class="tags">
+        
+        <span class="tag">遥感超分</span>
+        
+        <span class="tag">任意尺度</span>
+        
+        <span class="tag">高斯泼溅</span>
+        
+        <span class="tag">多帧融合</span>
+        
+      </div>
+      <div class="authors">
+        
+          <div class="author-names">
+            Canjie Liu <span class="h-index">h=0</span>, Liuqian Wang <span class="h-index">h=1</span>, Qi Ming <span class="h-index">h=14</span>, Wei Lu <span class="h-index">h=0</span>, Xiaohan Hao <span class="h-index">h=2</span>, Yuefei Wu, Wentao Chao, Lei Shi
+            <span class="h-badge">max h=14</span>
+          </div>
+          
+          
+            
+              
+            
+          
+            
+          
+            
+          
+            
+          
+            
+          
+            
+          
+            
+          
+            
+          
+          
+          <div class="author-affiliations">
+            <span class="affil-badge">Wei LuAffiliation:Zhengzhou UniversityBeijing University of Technology  Anhui University</span>
+          </div>
+          
+        
+      </div>
+    </div>
+    
+    <div class="paper">
+      <div class="paper-title">
+        <a href="https://arxiv.org/abs/2611.22699v2" target="_blank">TANGO: Real-World Unregistered RGB-Guided Hyperspectral Super-Resolution with Two-Camera Acquisitions</a>
+        <span class="score">76</span>
+        <span class="subscores">相关 33 · 新颖 21 · 质量 22</span>
+        
+        
+      </div>
+      <div class="tldr">DUET is introduced, the first large-scale public dataset for unregistered RGB-guided hyperspectral super-resolution, and TANGO (Two-camera AligNment with Gated Occlusions), which first compensates for the dominant cross-camera displacement through end-to-end global alignment and then refines the remaining inconsistencies with a coarse-to-fine local feature alignment.</div>
+      <div class="summary">发布DUET首个双相机真实未配对RGB引导高光谱超分数据集（403场景），并提出TANGO通过端到端全局对齐、粗到细局部特征对齐与遮挡门控机制处理跨模态错位，在DUET和REAL上PSNR最高领先2.29dB且FLOPs减少2.5倍。</div>
+      <div class="tags">
+        
+        <span class="tag">高光谱超分</span>
+        
+        <span class="tag">未配对</span>
+        
+        <span class="tag">跨模态对齐</span>
+        
+        <span class="tag">数据集</span>
+        
+      </div>
+      <div class="authors">
+        
+          <div class="author-names">
+            Matteo Kolyszko <span class="h-index">h=1</span>, Marco Buzzelli <span class="h-index">h=16</span>, Simone Bianco <span class="h-index">h=38</span>, Raimondo Schettini <span class="h-index">h=51</span>
+            <span class="h-badge">max h=51</span>
+          </div>
+          
+          
+            
+          
+            
+              
+            
+          
+            
+          
+            
+          
+          
+          <div class="author-affiliations">
+            <span class="affil-badge">University of Milano-Bicocca</span>
+          </div>
+          
+        
+      </div>
+    </div>
+    
+    <div class="paper">
+      <div class="paper-title">
+        <a href="https://arxiv.org/abs/2611.24084v1" target="_blank">From Restoration to Redrawing: Revitalizing Ancient Chinese Characters by SVG Code Generation and Editing</a>
+        <span class="score">75</span>
+        <span class="subscores">相关 31 · 新颖 25 · 质量 19</span>
+        
+        
+      </div>
+      
+      <div class="summary">提出ReDraw两阶段视觉语言模型，将汉简古文字修复重构为SVG代码生成与编辑，先忠实矢量化已观测笔画再基于骨架链式思维与GRPO强化学习补全残缺笔画且不改动已有路径，在合成数据和真实汉简字形上表现优异。</div>
+      <div class="tags">
+        
+        <span class="tag">古文字修复</span>
+        
+        <span class="tag">SVG代码生成</span>
+        
+        <span class="tag">视觉语言模型</span>
+        
+        <span class="tag">强化学习</span>
+        
+      </div>
+      <div class="authors">
+        
+          <div class="author-names">
+            Weiguang Zhang, Linhua Dong, Bin Dong, Shanshan Jiang, Maizhen Ning, Xiaoqiang Kang, Kun Zhang, Hao Xu, Xiaowei Huang, Wei Wang, Kaizhu Huang, Qiufeng Wang
+            
+          </div>
+          
+          
+            
+              
+            
+          
+            
+          
+            
+          
+            
+          
+            
+          
+            
+          
+            
+          
+            
+          
+            
+          
+            
+          
+            
+          
+            
+          
+          
+          <div class="author-affiliations">
+            <span class="affil-badge">Weiguang ZhangAffiliation:University of LiverpoolXi’an Jiaotong-Liverpool University</span>
+          </div>
+          
+        
+      </div>
+    </div>
+    
+    <div class="paper">
+      <div class="paper-title">
+        <a href="https://arxiv.org/abs/2611.22331v1" target="_blank">DAP-MR: Degradation-Aware Prompt-Magnitude Routing for Real-World Ultrasound Super-Resolution</a>
+        <span class="score">74</span>
+        <span class="subscores">相关 35 · 新颖 20 · 质量 19</span>
+        
+        
+      </div>
+      <div class="tldr">DAP-MR delivers better restoration quality and generalizes more consistently across different domains, and can be added to both one-step and multi-step diffusion super-resolution frameworks without changing their core structures.</div>
+      <div class="summary">提出DAP-MR退化感知提示-强度路由框架，将退化类型（CLIP初始化token）与连续强度（路由器预测）解耦作为超声超分条件，可即插于单步和多步扩散超分，提升修复质量并在解剖域偏移和真实超声数据上更稳定泛化。</div>
+      <div class="tags">
+        
+        <span class="tag">超声超分</span>
+        
+        <span class="tag">退化感知提示</span>
+        
+        <span class="tag">扩散模型</span>
+        
+        <span class="tag">条件解耦</span>
+        
+      </div>
+      <div class="authors">
+        
+          <div class="author-names">
+            Ngoc-Hoang-Lam Le, Thi-An Le <span class="h-index">h=0</span>, Dinh-Hung Le <span class="h-index">h=2</span>, Manh-Hung Nguyen <span class="h-index">h=4</span>, Kai-Lung Hua <span class="h-index">h=3</span>, Ching-Chun Huang
+            <span class="h-badge">max h=4</span>
+          </div>
+          
+          
+            
+              
+            
+          
+            
+          
+            
+          
+            
+              
+            
+          
+            
+              
+            
+          
+            
+          
+          
+          <div class="author-affiliations">
+            <span class="affil-badge">National Yang Ming Chiao Tung University</span><span class="affil-badge">Ho Chi Minh City University of Technology and Education</span><span class="affil-badge">National Taiwan University of Science and Technology</span>
+          </div>
+          
+        
+      </div>
+    </div>
+    
+    <div class="paper">
+      <div class="paper-title">
+        <a href="https://arxiv.org/abs/2611.24242v1" target="_blank">Joint Image Denoising and Interpolation via Mixed Graph Filtering</a>
+        <span class="score">73</span>
+        <span class="subscores">相关 36 · 新颖 20 · 质量 17</span>
+        
+        
+      </div>
+      
+      <div class="summary">从混合图滤波视角联合建模去噪（无向图滤波）与插值（有向图滤波），证明（伪）线性去噪器和插值器对应MAP图先验解，给出可分与非可分情形刻画并用共轭梯度高效求解，在多种组合上一致优于先去噪后插值的分离流程。</div>
+      <div class="tags">
+        
+        <span class="tag">联合去噪插值</span>
+        
+        <span class="tag">图滤波</span>
+        
+        <span class="tag">MAP估计</span>
+        
+        <span class="tag">优化</span>
+        
+      </div>
+      <div class="authors">
+        
+          <div class="author-names">
+            Gene Cheung <span class="h-index">h=39</span>, Niruhan Viswarupan, Romisaa Elsaidy
+            <span class="h-badge">max h=39</span>
+          </div>
+          
+          
+            
+              
+            
+          
+            
+          
+            
+          
+          
+          <div class="author-affiliations">
+            <span class="affil-badge">York University</span>
+          </div>
+          
+        
+      </div>
+    </div>
+    
+    <div class="paper">
+      <div class="paper-title">
+        <a href="https://arxiv.org/abs/2611.22317v1" target="_blank">SIDUMN: Self-Supervised Image Denoising Under Symmetric Multiplicative Noise</a>
+        <span class="score">73</span>
+        <span class="subscores">相关 35 · 新颖 20 · 质量 18</span>
+        
+        
+      </div>
+      <div class="tldr">SIDUMN, a symmetric noisier framework for self-supervised denoising under mean-one symmetric multiplicative noise, is proposed and it is proved that, for any trained network, antithetic averaging never increases the expected squared error of a single noisier-input reconstruction.</div>
+      <div class="summary">提出SIDUMN对称加噪自监督去噪框架，用均值一的对称乘性噪声构造互补的对偶加噪图像互相预测并在推理时做反演对平均，证明该平均不增大期望平方误差，在BSD300和ImageNet上自监督PSNR最优并接近监督上限。</div>
+      <div class="tags">
+        
+        <span class="tag">自监督去噪</span>
+        
+        <span class="tag">乘性噪声</span>
+        
+        <span class="tag">对偶平均</span>
+        
+        <span class="tag">理论保证</span>
+        
+      </div>
+      <div class="authors">
+        
+          <div class="author-names">
+            Nyan Htet Naing <span class="h-index">h=0</span>, Gyeongha Hwang <span class="h-index">h=9</span>
+            <span class="h-badge">max h=9</span>
+          </div>
+          
+          
+            
+              
+            
+          
+            
+          
+          
+          <div class="author-affiliations">
+            <span class="affil-badge">Nyan Htet Naing††thanks:Nyan Htet Naing is currently a PhD student in the Department of Mathematics, Kyungpook National University, Korea. E-mail: nyan11@knu.ac.kr</span>
+          </div>
+          
+        
+      </div>
+    </div>
+    
+    <div class="paper">
+      <div class="paper-title">
+        <a href="https://arxiv.org/abs/2611.24157v1" target="_blank">GenRF: Generative Registration-free Image Fusion</a>
+        <span class="score">70</span>
+        <span class="subscores">相关 31 · 新颖 20 · 质量 19</span>
+        
+        
+      </div>
+      
+      <div class="summary">提出GenRF基于预训练FLUX经LoRA适配，利用跨注意力的位置无关聚合与生成先验，无需显式配准即可对未配准、退化的多模态图像同时增强、补全缺失上下文并融合，在真实红外-可见光融合及下游检测上有效，并零调泛化到多曝光和多聚焦融合。</div>
+      <div class="tags">
+        
+        <span class="tag">图像融合</span>
+        
+        <span class="tag">免配准</span>
+        
+        <span class="tag">生成先验</span>
+        
+        <span class="tag">FLUX</span>
+        
+      </div>
+      <div class="authors">
+        
+          <div class="author-names">
+            Linfeng Tang, Zhijun Fan, Yang Chen, Zizhuo Li, Hao Zhang, Jiayi Ma
+            
+          </div>
+          
+          
+            
+              
+            
+          
+            
+          
+            
+          
+            
+          
+            
+          
+            
+          
+          
+          <div class="author-affiliations">
+            <span class="affil-badge">Linfeng TangAffiliation:Wuhan University, China</span>
+          </div>
+          
+        
+      </div>
+    </div>
+    
+  </div>
+  
+</main>
+</div>
+
+<script>
+(function() {
+  var sections = document.querySelectorAll('.category, .summary-section');
+  var links = document.querySelectorAll('.sidebar-nav a');
+  if (!sections.length || !links.length) return;
+
+  var observer = new IntersectionObserver(function(entries) {
+    entries.forEach(function(entry) {
+      if (entry.isIntersecting) {
+        links.forEach(function(l) { l.classList.remove('active'); });
+        var id = entry.target.id;
+        var active = document.querySelector('.sidebar-nav a[href="#' + id + '"]');
+        if (active) active.classList.add('active');
+      }
+    });
+  }, { rootMargin: '-20% 0px -60% 0px' });
+
+  sections.forEach(function(s) { observer.observe(s); });
+})();
+</script>
+</body>
+</html>
